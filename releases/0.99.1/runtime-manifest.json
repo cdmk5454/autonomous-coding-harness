@@ -1,0 +1,13 @@
+{
+  "version": "0.99.1",
+  "build_id": "0.99.1-public-sanitized",
+  "scope": "PUBLIC_SANITIZED_EXPORT",
+  "canonical_private_release_build_id": "0.99.1+20260910.3",
+  "implementation_status": "COMPLETE",
+  "current_phase": "PRODUCT_WORKLOAD_STABILIZATION_AND_EVIDENCE_COLLECTION",
+  "validation": {
+    "focused_public_tests": "155 PASS_OR_EXPLICIT_SKIP; 5 SKIPPED; 0 ERROR",
+    "deterministic_eval": "50/50 PASS; release_gate=PASS",
+    "live_provider_calls": "NOT_RUN"
+  }
+}

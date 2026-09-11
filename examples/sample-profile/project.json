@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "sample-profile",
+  "display_name": "Synthetic Sample Profile",
+  "workspace_roots": ["C:\\sample-workspace"],
+  "context": {
+    "project_rules": "rules.md",
+    "analysis": "analysis.md",
+    "ui_map": "ui-map"
+  },
+  "modules": [
+    {
+      "name": "sample-service",
+      "path": "sample-service",
+      "kind": "backend",
+      "protected": false,
+      "build": {"cwd": "sample-service", "argv": ["python", "-m", "unittest"]}
+    },
+    {
+      "name": "sample-web",
+      "path": "sample-web",
+      "kind": "frontend",
+      "protected": false
+    }
+  ],
+  "rules": {
+    "always": ["rules.md"],
+    "backend": ["rules.md"],
+    "frontend": ["rules.md"],
+    "sql": ["rules.md"],
+    "architecture": ["rules.md"],
+    "platform": ["rules.md"]
+  },
+  "area_patterns": {
+    "backend": ["sample-service/**"],
+    "frontend": ["sample-web/**"],
+    "sql": ["sample-service/**/*.sql"],
+    "architecture": ["**/architecture.*"]
+  },
+  "protected_paths": [".git/**"],
+  "local_dev_config_excludes": [".env", ".env.*"],
+  "control_policy": {
+    "commit_policy": "BATCH_FINAL_COMMIT",
+    "cumulative_worktree": true,
+    "auto_continue_without_commit": true,
+    "pre_job_snapshot_supported": true,
+    "scoped_rollback_supported": true,
+    "final_commit_required": true,
+    "task_owned_baseline_files": [],
+    "external_frozen_baseline_files": []
+  }
+}

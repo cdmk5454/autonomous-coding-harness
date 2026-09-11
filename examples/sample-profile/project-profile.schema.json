@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-profile.schema.json",
+  "title": "Harness Project Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "display_name",
+    "workspace_roots",
+    "context",
+    "modules",
+    "rules",
+    "area_patterns",
+    "protected_paths",
+    "local_dev_config_excludes"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "display_name": { "type": "string", "minLength": 1 },
+    "workspace_roots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_rules", "analysis", "ui_map"],
+      "properties": {
+        "project_rules": { "$ref": "#/$defs/relativePath" },
+        "analysis": { "$ref": "#/$defs/relativePath" },
+        "ui_map": { "$ref": "#/$defs/relativePath" },
+        "db_catalog": { "$ref": "#/$defs/relativePath" },
+        "feature_map": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "path", "kind", "protected"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "path": { "$ref": "#/$defs/relativePath" },
+          "kind": { "enum": ["backend", "frontend", "library", "infrastructure"] },
+          "protected": { "type": "boolean" },
+          "role": { "type": "string", "minLength": 1 },
+          "build": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cwd", "argv"],
+            "properties": {
+              "cwd": { "$ref": "#/$defs/relativePath" },
+              "argv": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rules": { "$ref": "#/$defs/ruleMap" },
+    "area_patterns": { "$ref": "#/$defs/patternMap" },
+    "protected_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "local_dev_config_excludes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "control_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit_policy",
+        "cumulative_worktree",
+        "auto_continue_without_commit",
+        "pre_job_snapshot_supported",
+        "scoped_rollback_supported",
+        "final_commit_required",
+        "task_owned_baseline_files",
+        "external_frozen_baseline_files"
+      ],
+      "properties": {
+        "commit_policy": { "enum": ["PER_JOB", "BATCH_FINAL_COMMIT"] },
+        "cumulative_worktree": { "type": "boolean" },
+        "auto_continue_without_commit": { "type": "boolean" },
+        "pre_job_snapshot_supported": { "type": "boolean" },
+        "scoped_rollback_supported": { "type": "boolean" },
+        "final_commit_required": { "type": "boolean" },
+        "task_owned_baseline_files": { "$ref": "#/$defs/baselineFiles" },
+        "external_frozen_baseline_files": { "$ref": "#/$defs/baselineFiles" }
+      }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![\\\\/]).+",
+      "not": { "pattern": "(^|[\\\\/])\\.\\.([\\\\/]|$)" }
+    },
+    "ruleMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["always", "backend", "frontend", "sql", "architecture", "platform"],
+      "properties": {
+        "always": { "$ref": "#/$defs/pathArray" },
+        "backend": { "$ref": "#/$defs/pathArray" },
+        "frontend": { "$ref": "#/$defs/pathArray" },
+        "sql": { "$ref": "#/$defs/pathArray" },
+        "architecture": { "$ref": "#/$defs/pathArray" },
+        "platform": { "$ref": "#/$defs/pathArray" }
+      }
+    },
+    "patternMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "frontend", "sql", "architecture"],
+      "properties": {
+        "backend": { "$ref": "#/$defs/pathArray" },
+        "frontend": { "$ref": "#/$defs/pathArray" },
+        "sql": { "$ref": "#/$defs/pathArray" },
+        "architecture": { "$ref": "#/$defs/pathArray" }
+      }
+    },
+    "pathArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "baselineFiles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": {
+            "type": "string",
+            "pattern": "^(?:DELETED|[0-9a-fA-F]{64})$"
+          },
+          "evidence": { "type": "string" }
+        }
+      }
+    }
+  }
+}

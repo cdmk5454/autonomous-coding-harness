@@ -1,0 +1,9 @@
+{
+  "version": "0.99.1",
+  "build_id": "0.99.1+20260910.3",
+  "control_schema_version": 5,
+  "release_ready": true,
+  "cutover_ready": true,
+  "phase": "RELEASE",
+  "validation": "Release-acceptance completion patch 0.99.1+20260910.3: integrated full suite 1524/1524 PASS on release source (37 new acceptance-gap regressions); focused 0.99.1 runtime/ownership suites PASS; deterministic eval corpus release gate PASS; check-profile VALID; check-control fail-closed on the same pre-existing unadopted external delta (preserved, canonical operator adoption path unchanged, now explicitly BASELINE_ADOPTION_ONLY); OpenCode 1.18.30 live MANAGED-local ephemeral-auth canary PASS (loopback server, ephemeral credential, session create/query/delete, child cleanup). Closed acceptance gaps: persistent OpenCode old-writer quiescence (native abort + bounded confirmation, unconfirmed replacement denial, aborted late responses never published), current-custody-only normal snapshot (no historical successful-Job scan), explicitly approved LOW deterministic review-oracle skip with bound receipt, turn-correlated meaningful progress, MANAGED local ephemeral auth fix, truthful adoption boundary and capability invariants. Direct validated publication remains DEFERRED_1_0; undeclared arbitrary side-effect interception remains NOT PROVEN."
+}

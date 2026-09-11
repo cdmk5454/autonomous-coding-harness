@@ -1,0 +1,15 @@
+{
+  "client_job_id": "sample-job-001",
+  "requirement": "Update the sample formatter and its deterministic test.",
+  "target_modules": ["sample-service"],
+  "target_resources": ["sample-service/formatter.py", "sample-service/test_formatter.py"],
+  "worker": "codex",
+  "model": "configured-by-operator",
+  "operation_capabilities": [],
+  "test_plan": {
+    "mandatory": true,
+    "required_tests": ["sample-service/test_formatter.py"],
+    "command": ["python", "-m", "unittest", "sample-service/test_formatter.py"],
+    "verification_depth": "STATIC"
+  }
+}

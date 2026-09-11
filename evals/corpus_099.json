@@ -1,0 +1,389 @@
+{
+  "revision": "harness-eval-corpus/1",
+  "case_defaults": {
+    "category": "0.99",
+    "critical": true,
+    "initial_state": {
+      "state": "RUNNING",
+      "gate": "OPEN",
+      "disposition": "PENDING",
+      "ownership": {"writer_count": 1, "writer": "WORKER"},
+      "retry": {"domain": "", "delta": 0},
+      "evidence": "PENDING",
+      "product_readiness": "FINALIZATION_PENDING",
+      "verification_depth": "STATIC",
+      "side_effect": "NONE"
+    },
+    "expected": {
+      "state": "RUNNING",
+      "gate": "OPEN",
+      "disposition": "PENDING",
+      "ownership": {"writer_count": 1, "writer": "WORKER"},
+      "retry": {"domain": "", "delta": 0},
+      "evidence": "PENDING",
+      "product_readiness": "FINALIZATION_PENDING",
+      "verification_depth": "STATIC",
+      "side_effect": "NONE"
+    },
+    "forbidden": {
+      "state": [], "transition": [], "gate": [],
+      "product_retry_leakage": true, "writer_overlap": true,
+      "source_mutation": true, "duplicate_dispatch": true,
+      "fake_success": true, "false_complete": true,
+      "stale_qa_acceptance": true
+    },
+    "trace_assertions": []
+  },
+  "cases": [
+    {
+      "eval_id": "HIST-POLICY-DRIFT",
+      "category": "historical-0.9",
+      "events": [{"type": "POLICY_DRIFT"}],
+      "expected": {"state": "BLOCKED", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "evidence": "INVALID", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}},
+      "trace_assertions": [{"contains": "POLICY_DRIFT", "count": 1}]
+    },
+    {
+      "eval_id": "HIST-REVIEW-SCHEMA-INVALID",
+      "category": "historical-0.9",
+      "events": [{"type": "REVIEW_SCHEMA_INVALID"}],
+      "expected": {"state": "REVIEW_TECHNICAL_RECOVERY", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}, "flags": {"candidate_preserved": true}},
+      "trace_assertions": [{"contains": "REVIEW_SCHEMA_INVALID"}]
+    },
+    {
+      "eval_id": "HIST-IPC-NOT-NO-CHANGE",
+      "category": "historical-0.9",
+      "events": [{"type": "IPC_RUNTIME_FAILURE"}],
+      "expected": {"state": "RUNTIME_RECOVERY", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "retry": {"domain": "RUNTIME_RECOVERY", "delta": 0}, "flags": {"no_meaningful_source_change": false}},
+      "trace_assertions": [{"contains": "IPC_RUNTIME_FAILURE"}]
+    },
+    {
+      "eval_id": "HIST-VERIFIED-NO-TASK-DELTA",
+      "category": "historical-0.9",
+      "events": [{"type": "VERIFIED_NO_TASK_DELTA"}],
+      "expected": {"state": "SUCCEEDED", "gate": "PASS", "disposition": "VERIFIED_NO_TASK_DELTA", "evidence": "BOUND", "product_readiness": "COMPLETE"},
+      "trace_assertions": [{"contains": "VERIFIED_NO_TASK_DELTA"}]
+    },
+    {
+      "eval_id": "HIST-FAILED-FINAL-CANDIDATE-HANDOFF",
+      "category": "historical-0.9",
+      "events": [{"type": "FAILED_FINAL_CANDIDATE"}],
+      "expected": {"state": "FAILED_FINAL", "gate": "FAIL", "disposition": "PRESERVED_CANDIDATE", "flags": {"candidate_preserved": true}},
+      "trace_assertions": [{"contains": "FAILED_FINAL_CANDIDATE"}]
+    },
+    {
+      "eval_id": "HIST-QA-TAKEOVER",
+      "category": "historical-0.9",
+      "events": [{"type": "QA_TAKEOVER"}],
+      "expected": {"state": "AWAITING_QA", "gate": "DECISION", "disposition": "PENDING_DECISION", "ownership": {"writer_count": 0, "writer": "SUSPENDED"}, "product_readiness": "SKELETON_READY", "flags": {"decision_visible": true}},
+      "trace_assertions": [{"contains": "QA_TAKEOVER"}]
+    },
+    {
+      "eval_id": "HIST-INDEPENDENT-OPERATOR-HOLD",
+      "category": "historical-0.9",
+      "events": [{"type": "OPERATOR_HOLD"}],
+      "expected": {"state": "BLOCKED", "gate": "OPERATOR_HOLD", "disposition": "PRESERVED", "flags": {"independent_hold_preserved": true}},
+      "trace_assertions": [{"contains": "OPERATOR_HOLD"}]
+    },
+    {
+      "eval_id": "HIST-TERMINAL-EXECUTION-ID-REUSE",
+      "category": "historical-0.9",
+      "events": [{"type": "TERMINAL_EXECUTION_REUSE"}],
+      "expected": {"gate": "REJECTED", "disposition": "IMMUTABLE_TERMINAL", "flags": {"transition_rejected": true}},
+      "trace_assertions": [{"contains": "TERMINAL_EXECUTION_REUSE"}]
+    },
+    {
+      "eval_id": "HIST-STALE-CANDIDATE-PROJECTION",
+      "category": "historical-0.9",
+      "events": [{"type": "STALE_CANDIDATE"}],
+      "expected": {"state": "BLOCKED", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "evidence": "INVALID", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}},
+      "trace_assertions": [{"contains": "STALE_CANDIDATE"}]
+    },
+    {
+      "eval_id": "HIST-CANDIDATELESS-CONTRACT-QA",
+      "category": "historical-0.9",
+      "events": [{"type": "CANDIDATELESS_QA"}],
+      "expected": {"state": "AWAITING_QA", "gate": "DECISION", "disposition": "PENDING_DECISION", "ownership": {"writer_count": 0, "writer": "SUSPENDED"}, "product_readiness": "SKELETON_READY", "flags": {"decision_visible": true}},
+      "trace_assertions": [{"contains": "CANDIDATELESS_QA"}]
+    },
+    {
+      "eval_id": "HIST-RESOLVED-CANDIDATELESS-SCOPE",
+      "category": "historical-0.9",
+      "events": [{"type": "QA_RESOLUTION", "revision": 2, "expected_revision": 2}],
+      "expected": {"state": "FINALIZATION_PENDING", "gate": "JIT_MATERIALIZATION", "disposition": "QA_RESOLVED", "ownership": {"writer_count": 0, "writer": "NONE"}},
+      "trace_assertions": [{"contains": "QA_RESOLUTION"}]
+    },
+    {
+      "eval_id": "HIST-SUCCEEDED-VERIFIED-TAKEOVER",
+      "category": "historical-0.9",
+      "initial_state": {"state": "SUCCEEDED", "gate": "PASS", "disposition": "VERIFIED", "evidence": "BOUND", "product_readiness": "COMPLETE"},
+      "events": [{"type": "COMPLETED_TAKEOVER"}],
+      "expected": {"state": "SUCCEEDED", "gate": "REJECTED", "disposition": "IMMUTABLE_TERMINAL", "evidence": "BOUND", "product_readiness": "COMPLETE", "flags": {"transition_rejected": true}},
+      "trace_assertions": [{"contains": "COMPLETED_TAKEOVER"}]
+    },
+    {
+      "eval_id": "HIST-LATE-ATTEMPT-RESULT",
+      "category": "historical-0.9",
+      "events": [{"type": "LATE_ATTEMPT_RESULT"}],
+      "expected": {"gate": "RECONCILE", "disposition": "LATE_IGNORED", "flags": {"late_event_applied": false}},
+      "trace_assertions": [{"contains": "LATE_ATTEMPT_RESULT"}]
+    },
+    {
+      "eval_id": "HIST-MISSING-EVIDENCE-BINDING",
+      "category": "historical-0.9",
+      "events": [{"type": "MISSING_EVIDENCE_BINDING"}],
+      "expected": {"state": "BLOCKED", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "evidence": "INVALID", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}},
+      "trace_assertions": [{"contains": "MISSING_EVIDENCE_BINDING"}]
+    },
+    {
+      "eval_id": "HIST-CONTRACT-UNRESOLVED-RETRY",
+      "category": "historical-0.9",
+      "events": [{"type": "CONTRACT_UNRESOLVED"}],
+      "expected": {"state": "AWAITING_QA", "gate": "DECISION", "disposition": "PENDING_DECISION", "retry": {"domain": "", "delta": 0}, "product_readiness": "SKELETON_READY"},
+      "trace_assertions": [{"contains": "CONTRACT_UNRESOLVED"}]
+    },
+    {
+      "eval_id": "HIST-NOT-RUN-BY-POLICY-RETRY",
+      "category": "historical-0.9",
+      "events": [{"type": "NOT_RUN_BY_POLICY"}],
+      "expected": {"disposition": "NOT_RUN_BY_POLICY", "retry": {"domain": "", "delta": 0}},
+      "trace_assertions": [{"contains": "NOT_RUN_BY_POLICY"}]
+    },
+    {
+      "eval_id": "HIST-FALSE-PRODUCT-COMPLETE",
+      "category": "historical-0.9",
+      "events": [{"type": "REPORT_COMPLETE", "open_decisions": 1}],
+      "expected": {"gate": "HOLD", "disposition": "FALSE_COMPLETE_BLOCKED", "product_readiness": "FINALIZATION_PENDING", "flags": {"false_complete": false}},
+      "trace_assertions": [{"contains": "REPORT_COMPLETE"}]
+    },
+    {
+      "eval_id": "HIST-DECISION-REQUIRED-VISIBILITY",
+      "category": "historical-0.9",
+      "events": [{"type": "DECISION_REQUIRED"}],
+      "expected": {"state": "AWAITING_QA", "gate": "DECISION", "disposition": "PENDING_DECISION", "ownership": {"writer_count": 0, "writer": "SUSPENDED"}, "product_readiness": "SKELETON_READY", "flags": {"decision_visible": true}},
+      "trace_assertions": [{"contains": "DECISION_REQUIRED"}]
+    },
+    {
+      "eval_id": "HIST-DUPLICATE-TERMINAL-NOTIFICATION",
+      "category": "historical-0.9",
+      "events": [{"type": "NOTIFY", "fingerprint": "terminal"}, {"type": "NOTIFY", "fingerprint": "terminal"}],
+      "expected": {"notification_count": 1},
+      "trace_assertions": [{"contains": "NOTIFY", "count": 2}]
+    },
+    {
+      "eval_id": "EXEC-WORKER-KILL-NATIVE-RESUME",
+      "events": [{"type": "PROCESS_KILL"}, {"type": "SESSION_RESUME"}],
+      "expected": {"state": "RUNNING", "gate": "OPEN", "disposition": "RESUMED", "retry": {"domain": "RUNTIME_RECOVERY", "delta": 0}, "flags": {"session_resumed": true}},
+      "trace_assertions": [{"contains": "PROCESS_KILL"}, {"contains": "SESSION_RESUME"}]
+    },
+    {
+      "eval_id": "EXEC-RESUME-IMPOSSIBLE-FRESH-ATTEMPT",
+      "events": [{"type": "RESUME_IMPOSSIBLE"}],
+      "expected": {"state": "FRESH_ATTEMPT", "gate": "JIT_ATTEMPT", "disposition": "PRESERVED_CONTEXT", "retry": {"domain": "RUNTIME_RECOVERY", "delta": 0}, "flags": {"candidate_preserved": true}},
+      "trace_assertions": [{"contains": "RESUME_IMPOSSIBLE"}]
+    },
+    {
+      "eval_id": "EXEC-RUNTIME-RECOVERY-EXHAUSTION",
+      "events": [{"type": "RUNTIME_RECOVERY_EXHAUSTED"}],
+      "expected": {"state": "BLOCKED", "gate": "TECHNICAL_HOLD", "disposition": "TECHNICAL_FAILURE", "retry": {"domain": "RUNTIME_RECOVERY", "delta": 0}},
+      "forbidden": {"state": ["FAILED_FINAL"]},
+      "trace_assertions": [{"contains": "RUNTIME_RECOVERY_EXHAUSTED"}]
+    },
+    {
+      "eval_id": "EXEC-ACK-LOST-NO-DUPLICATE",
+      "events": [{"type": "COMMAND_SENT"}, {"type": "ACK_LOST"}],
+      "expected": {"gate": "RECONCILE", "disposition": "QUERY_DO_NOT_RESEND", "dispatch_count": 1},
+      "trace_assertions": [{"contains": "COMMAND_SENT", "count": 1}, {"contains": "ACK_LOST"}]
+    },
+    {
+      "eval_id": "EXEC-DUPLICATE-QA-ONE-RESOLUTION",
+      "events": [{"type": "QA_DUPLICATE"}, {"type": "QA_DUPLICATE"}],
+      "expected": {"disposition": "IDEMPOTENT_QA", "flags": {"canonical_resolution_count": 1}},
+      "trace_assertions": [{"contains": "QA_DUPLICATE", "count": 2}]
+    },
+    {
+      "eval_id": "EXEC-STALE-QA-CAS-REJECTION",
+      "events": [{"type": "QA_RESOLUTION", "revision": 1, "expected_revision": 2}],
+      "expected": {"gate": "REJECTED", "disposition": "STALE_QA_REJECTED", "flags": {"stale_qa_accepted": false}},
+      "trace_assertions": [{"contains": "QA_RESOLUTION"}]
+    },
+    {
+      "eval_id": "EXEC-LEASE-EXPIRED-OLD-WRITER-ALIVE",
+      "events": [{"type": "LEASE_EXPIRED_OLD_WRITER_ALIVE"}],
+      "expected": {"gate": "FENCED", "disposition": "OLD_WRITER_ACTIVE", "ownership": {"writer_count": 1, "writer": "OLD_WRITER"}},
+      "trace_assertions": [{"contains": "LEASE_EXPIRED_OLD_WRITER_ALIVE"}]
+    },
+    {
+      "eval_id": "EXEC-RUNTIME-SCHEMA-PREFLIGHT",
+      "events": [{"type": "RUNTIME_SCHEMA_MISMATCH"}],
+      "expected": {"state": "BLOCKED", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "evidence": "INVALID", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}},
+      "trace_assertions": [{"contains": "RUNTIME_SCHEMA_MISMATCH"}]
+    },
+    {
+      "eval_id": "EXEC-PURE-CANDIDATE-REVALIDATION",
+      "events": [{"type": "CANDIDATE_REVALIDATION"}],
+      "expected": {"gate": "VALIDATE", "disposition": "REVALIDATION_ONLY", "flags": {"coding_worker_called": false}},
+      "trace_assertions": [{"contains": "CANDIDATE_REVALIDATION"}]
+    },
+    {
+      "eval_id": "EXEC-DEFERRED-SKELETON-INDEPENDENT-CONTINUE",
+      "events": [{"type": "DEFERRED_DECISION"}],
+      "expected": {"state": "SKELETON_READY", "gate": "DECISION", "disposition": "PENDING_DECISION", "product_readiness": "SKELETON_READY", "flags": {"independent_job_continue": true}},
+      "trace_assertions": [{"contains": "DEFERRED_DECISION"}]
+    },
+    {
+      "eval_id": "EXEC-DEFERRED-RESOLUTION-FRESH-FINALIZATION",
+      "events": [{"type": "QA_RESOLUTION", "revision": 3, "expected_revision": 3}, {"type": "FINALIZATION_MATERIALIZED"}],
+      "expected": {"state": "RUNNING", "gate": "OPEN", "disposition": "FRESH_FINALIZATION", "ownership": {"writer_count": 1, "writer": "WORKER"}, "flags": {"fresh_execution": true}},
+      "trace_assertions": [{"contains": "QA_RESOLUTION"}, {"contains": "FINALIZATION_MATERIALIZED"}]
+    },
+    {
+      "eval_id": "EXEC-ACTIVE-GLOBAL-POLICY-FROZEN",
+      "events": [{"type": "GLOBAL_POLICY_CHANGE"}],
+      "expected": {"disposition": "FROZEN_EXECUTION_CONTINUES", "flags": {"frozen_policy_preserved": true}},
+      "trace_assertions": [{"contains": "GLOBAL_POLICY_CHANGE"}]
+    },
+    {
+      "eval_id": "EXEC-REVIEW-PROVIDER-TECHNICAL-RECOVERY",
+      "events": [{"type": "REVIEW_PROVIDER_FAILURE"}],
+      "expected": {"state": "REVIEW_TECHNICAL_RECOVERY", "gate": "HOLD", "disposition": "TECHNICAL_FAILURE", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}, "flags": {"candidate_preserved": true}},
+      "trace_assertions": [{"contains": "REVIEW_PROVIDER_FAILURE"}]
+    },
+    {
+      "eval_id": "EXEC-MANAGED-DIRECT-MUTATION-BLOCKED",
+      "events": [{"type": "MANAGED_DIRECT_MUTATION"}],
+      "expected": {"gate": "BLOCKED", "disposition": "UNAUTHORIZED_MUTATION_BLOCKED", "side_effect": "NONE"},
+      "trace_assertions": [{"contains": "MANAGED_DIRECT_MUTATION"}]
+    },
+    {
+      "eval_id": "EXEC-DROID-FALLBACK-FRESH-ATTEMPT",
+      "events": [{"type": "DROID_FALLBACK"}],
+      "expected": {"state": "FRESH_ATTEMPT", "gate": "JIT_ATTEMPT", "disposition": "DROID_FALLBACK", "retry": {"domain": "RUNTIME_RECOVERY", "delta": 0}, "flags": {"old_writer_stopped": true, "candidate_preserved": true}},
+      "trace_assertions": [{"contains": "DROID_FALLBACK"}]
+    },
+    {
+      "eval_id": "EXEC-DB-BACKUP-RESTORE-INTEGRITY",
+      "events": [{"type": "DB_RESTORE"}],
+      "expected": {"gate": "PASS", "disposition": "RESTORED", "evidence": "BOUND", "side_effect": "CONTROL_COPY_ONLY", "flags": {"sqlite_consistent": true, "artifact_refs_intact": true}},
+      "trace_assertions": [{"contains": "DB_RESTORE"}]
+    },
+    {
+      "eval_id": "EXEC-INCIDENT-REDACTION",
+      "events": [{"type": "INCIDENT_EXPORT", "secrets_redacted": true, "pii_redacted": true, "identities_preserved": true}],
+      "expected": {"gate": "PASS", "evidence": "REDACTED", "flags": {"diagnostic_identities_preserved": true}},
+      "trace_assertions": [{"contains": "INCIDENT_EXPORT"}]
+    },
+    {
+      "eval_id": "EXEC-SOURCEVIEW-RECONNECT-OWNERSHIP",
+      "events": [{"type": "SOURCEVIEW_RECONNECT"}],
+      "expected": {"disposition": "SAME_SOURCE_VIEW", "ownership": {"writer_count": 1, "writer": "WORKER"}, "flags": {"source_view_preserved": true}},
+      "trace_assertions": [{"contains": "SOURCEVIEW_RECONNECT"}]
+    },
+    {
+      "eval_id": "EXEC-DUPLICATE-RUNTIME-EVENT",
+      "events": [{"type": "DUPLICATE_RUNTIME_EVENT"}, {"type": "DUPLICATE_RUNTIME_EVENT"}],
+      "expected": {"disposition": "APPLY_ONCE", "flags": {"event_apply_count": 1}},
+      "trace_assertions": [{"contains": "DUPLICATE_RUNTIME_EVENT", "count": 2}]
+    },
+    {
+      "eval_id": "EXEC-LATE-RUNTIME-EVENT",
+      "events": [{"type": "LATE_RUNTIME_EVENT"}],
+      "expected": {"gate": "RECONCILE", "disposition": "LATE_IGNORED", "flags": {"late_event_applied": false}},
+      "trace_assertions": [{"contains": "LATE_RUNTIME_EVENT"}]
+    },
+    {
+      "eval_id": "EXEC-SESSION-FORK-NO-AUTHORITY",
+      "events": [{"type": "SESSION_FORK"}],
+      "expected": {"disposition": "REFERENCE_ONLY", "ownership": {"writer_count": 0, "writer": "NONE"}, "flags": {"rollback_evidence": false}},
+      "trace_assertions": [{"contains": "SESSION_FORK"}]
+    },
+    {
+      "eval_id": "VERIFY-SOURCE-ONLY-INFERENCE-FORBIDDEN",
+      "events": [{"type": "SOURCE_ONLY_VERIFICATION"}],
+      "expected": {"gate": "HOLD", "disposition": "VERIFICATION_REJECTED", "evidence": "INVALID"},
+      "trace_assertions": [{"contains": "SOURCE_ONLY_VERIFICATION"}]
+    },
+    {
+      "eval_id": "VERIFY-MANDATORY-E2E-NO-STATIC-SUBSTITUTE",
+      "events": [{"type": "MANDATORY_E2E_STATIC_SUBSTITUTION"}],
+      "expected": {"gate": "HOLD", "disposition": "VERIFICATION_DEPTH_NOT_MET", "evidence": "INVALID", "verification_depth": "E2E"},
+      "trace_assertions": [{"contains": "MANDATORY_E2E_STATIC_SUBSTITUTION"}]
+    },
+    {
+      "eval_id": "VERIFY-STALE-CANDIDATE-CONTRACT-ENV",
+      "events": [{"type": "VERIFICATION_EVIDENCE_BOUND", "candidate_match": false, "contract_match": true, "environment_match": true, "artifact_present": true}],
+      "expected": {"gate": "HOLD", "disposition": "VERIFICATION_BINDING_STALE", "evidence": "INVALID"},
+      "trace_assertions": [{"contains": "VERIFICATION_EVIDENCE_BOUND"}]
+    },
+    {
+      "eval_id": "VERIFY-AGENT-SELF-REPORT-FORBIDDEN",
+      "events": [{"type": "AGENT_SELF_REPORT_ONLY"}],
+      "expected": {"gate": "HOLD", "disposition": "VERIFICATION_REJECTED", "evidence": "INVALID"},
+      "trace_assertions": [{"contains": "AGENT_SELF_REPORT_ONLY"}]
+    },
+    {
+      "eval_id": "VERIFY-ARTIFACT-BINDING-PASS",
+      "events": [{"type": "VERIFICATION_EVIDENCE_BOUND", "candidate_match": true, "contract_match": true, "environment_match": true, "artifact_present": true}],
+      "expected": {"gate": "PASS", "disposition": "VERIFIED", "evidence": "BOUND"},
+      "trace_assertions": [{"contains": "VERIFICATION_EVIDENCE_BOUND"}]
+    },
+    {
+      "eval_id": "CONTROL-NATIVE-QUEUE-JIT-GUARD",
+      "events": [{"type": "NATIVE_QUEUE_PRELOAD"}],
+      "expected": {"gate": "BLOCKED", "disposition": "NATIVE_BATCH_PRELOAD_FORBIDDEN", "flags": {"scheduler_bypassed": false}},
+      "trace_assertions": [{"contains": "NATIVE_QUEUE_PRELOAD"}]
+    },
+    {
+      "eval_id": "CONTROL-WORKER-REVIEWER-SESSION-SEPARATION",
+      "events": [{"type": "ROLE_SESSION_SHARE"}],
+      "expected": {"gate": "BLOCKED", "disposition": "NATIVE_SESSION_ROLE_SHARE_FORBIDDEN", "flags": {"role_session_shared": false}},
+      "trace_assertions": [{"contains": "ROLE_SESSION_SHARE"}]
+    },
+    {
+      "eval_id": "CONTROL-QA-BACKGROUND-WRITER-STOP",
+      "events": [{"type": "QA_BACKGROUND_FOLLOWUP"}],
+      "expected": {"state": "AWAITING_QA", "gate": "BLOCKED", "disposition": "WRITER_AUTHORITY_SUSPENDED", "ownership": {"writer_count": 0, "writer": "SUSPENDED"}, "side_effect": "NONE"},
+      "trace_assertions": [{"contains": "QA_BACKGROUND_FOLLOWUP"}]
+    },
+    {
+      "eval_id": "SECURITY-SECRET-IN-PROCESS-ARGV",
+      "events": [{
+        "type": "SECRET_IN_PROCESS_ARGV",
+        "credential_transport": "ENVIRONMENT",
+        "secret_in_process_argv": false,
+        "secret_in_logs": false,
+        "secret_in_evidence": false,
+        "secret_in_sqlite": false,
+        "secret_in_incident_bundle": false
+      }],
+      "expected": {
+        "gate": "PASS",
+        "disposition": "CREDENTIAL_ENV_TRANSPORT",
+        "evidence": "REDACTED",
+        "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0},
+        "flags": {
+          "secret_in_process_argv": false,
+          "secret_in_logs": false,
+          "secret_in_evidence": false,
+          "secret_in_sqlite": false,
+          "secret_in_incident_bundle": false
+        }
+      },
+      "forbidden": {
+        "secret_in_process_argv": true,
+        "secret_in_logs": true,
+        "secret_in_evidence": true,
+        "secret_in_sqlite": true,
+        "secret_in_incident_bundle": true,
+        "fake_success": true,
+        "product_retry_leakage": true
+      },
+      "trace_assertions": [{"contains": "SECRET_IN_PROCESS_ARGV", "count": 1}]
+    },
+    {
+      "eval_id": "CONTROL-MCP-FAILURE-TECHNICAL-DOMAIN",
+      "events": [{"type": "MCP_RUNTIME_FAILURE"}],
+      "expected": {"state": "BLOCKED", "gate": "TECHNICAL_HOLD", "disposition": "MCP_UNAVAILABLE", "retry": {"domain": "TECHNICAL_EXECUTION_RETRY", "delta": 0}},
+      "trace_assertions": [{"contains": "MCP_RUNTIME_FAILURE"}]
+    }
+  ]
+}
