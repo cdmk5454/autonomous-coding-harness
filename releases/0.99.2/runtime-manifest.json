@@ -1,0 +1,18 @@
+{
+  "version": "0.99.2",
+  "build_id": "0.99.2-public-sanitized",
+  "scope": "PUBLIC_SANITIZED_EXPORT",
+  "canonical_private_release_build_id": "0.99.2+20260914.1",
+  "implementation_status": "COMPLETE",
+  "control_schema_version": 5,
+  "validation": {
+    "canonical_integrated_suite": "1563/1563 PASS (private/canonical release record)",
+    "independent_focused_acceptance": "39/39 PASS",
+    "independent_release_hash_recheck": "152/152 MATCH",
+    "deterministic_eval": "PASS",
+    "live_provider_calls_in_public_export": "NOT_RUN"
+  },
+  "limitations": [
+    "Full Windows/provider-dependent suite was not reproduced from the public sanitized export."
+  ]
+}

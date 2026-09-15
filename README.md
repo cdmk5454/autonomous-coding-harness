@@ -1,72 +1,76 @@
 # Autonomous Coding Harness
 
-Production-oriented execution layer for AI coding agents.
+Production-oriented execution and verification layer for AI coding agents.
 
-Current stable milestone: **0.99.1 — Lean Execution Kernel**
+Current stable public milestone: **0.99.2 — Operational Convergence & Verification**
 
 ## Problem
 
-AI coding agents can produce useful changes while leaving execution state, ownership, recovery, and verification ambiguous. The Harness gives those actions a durable control boundary.
+AI coding agents can produce useful changes while leaving execution state, writer ownership, recovery, semantic retry, and verification ambiguous. The Harness gives those actions a durable control boundary and keeps Product outcome separate from runtime/tool failure.
 
 ## What this Harness does
 
-It materializes an immutable Job contract, selects a validated project profile, runs a fenced Worker, records Git and execution evidence, applies Build/Test/Review/Verification gates, and preserves candidates when recovery or human action is required.
-
-## Architecture overview
-
-The Python source tree contains the control repository, Job and Task state models, queue and supervisor, runtime adapters, Worker, Planner, Tester, Reviewer, Git collection and commit handling, risk controls, rollback and snapshot custody, and evidence projections. `docs/` explains the contracts and lifecycle.
+It materializes an immutable Job contract, selects a validated project profile, runs a fenced Worker, records Git and execution evidence, applies Build/Test/Review/Verification gates, preserves candidates across recovery, and keeps technical replacement separate from Product semantic rework.
 
 ## Core invariants
 
 - One canonical writer owns a materialized execution surface.
 - Job scope, profile, runtime contract, and relevant policy are frozen before execution.
 - Unknown ownership, path escape, stale revision, missing evidence, and unsafe capability requests fail closed.
-- A failed or interrupted attempt preserves its candidate and prior delta.
-- Review evidence is bound to the exact contract, execution surface, and changed atoms.
-- Technical recovery does not consume product retry budget.
+- A failed or interrupted attempt preserves its candidate and prior accepted delta.
+- Review evidence is reusable only while its exact proof inputs remain current.
+- Technical recovery does not consume Product semantic retry/rework budget.
+- Activity is not treated as meaningful progress; meaningful progress is not treated as proof of goal convergence.
+- Reports and operator projections are not a second execution authority.
 
-## Current 0.99.1 status
+## Current 0.99.2 status
 
-`0.99.1` implementation is complete. The current phase is **Product workload stabilization / evidence collection**. The release metadata identifies build `0.99.1+20260910.3` and records the release acceptance result.
+`0.99.2` implementation acceptance is complete. It keeps the 0.99.1 Lean Execution Kernel and adds operational stabilization from real workload evidence:
 
-The release covers the Lean Execution Kernel: correctness, recovery, ownership, rollback, review evidence, truthful runtime capability reporting, typed autonomous capability admission, and derived timing from durable timestamps.
+- bounded same-Job runtime technical recovery
+- explicit cross-Job semantic rework lineage
+- deterministic Review coverage-plan diagnostics
+- manual/binary review disposition
+- finalization-only retry without Worker rerun
+- conservative cross-rework Review evidence reuse
+- typed, non-blocking convergence telemetry
+- real-git rollback rehearsal
+
+SQLite control schema remains `5`. The release does **not** claim Multi-Worker, Stage Ticket, Advisor, Web Review, or Knowledge/RAG as implemented.
 
 ## Validation evidence
 
-The canonical/private Harness release records `0.99.1` implementation complete, an integrated suite result of `1524/1524 PASS`, release acceptance evidence, and a managed local runtime canary. That evidence belongs to build `0.99.1+20260910.3` and is retained separately under `release-evidence/`; it is not presented as a result reproduced from this sanitized tree.
+The canonical/private 0.99.2 release records build `0.99.2+20260914.1`, a `1563/1563` integrated Windows suite, deterministic evaluation release-gate PASS, and an OpenCode 1.18.30 managed-local canary. Those canonical records are not presented as if reproduced from this sanitized repository.
 
-The public sanitized export has its own reproducible gates. On the exported tree, the focused command below runs 155 tests with import and collection errors at zero; provider-dependent checks are explicit skips when their CLIs are unavailable. The deterministic corpus runs 50 cases with `release_gate=PASS`. Exact results and the validation environment are recorded in `PUBLIC_EXPORT_REPORT_FINAL.md` distributed beside the archive.
+An independent verification pass over the 0.99.2 review bundle re-ran the focused 0.99.2 acceptance suite (`39/39 PASS`), rechecked release hashes (`152/152 MATCH`), and re-ran the deterministic evaluation gate. The full Windows/provider-dependent suite was not reproduced in that Linux verification environment. See `docs/PUBLIC_VALIDATION_REPORT_0.99.2.md`.
 
 ## Quick Start
 
 ```text
-python -m unittest discover -s tests -p "test_099*.py"
+python -m unittest discover -s . -p "test_099*.py"
 python scripts/run_deterministic_eval.py
 ```
 
-These commands make no provider or LLM call. The runtime itself expects a project profile and common rule surface supplied through explicit configuration such as `AGENTS_DIR` and `AGENT_PROFILE_DIR`. A fully synthetic contract example is included in `examples/sample-profile`; no real project profile, credentials, control database, or execution history is included here.
+These public gates use synthetic fixtures and make no claim that private provider/live-runtime checks are reproducible without provider-specific configuration.
 
 ## Repository structure
 
-- Root Python modules: Harness runtime and control-plane implementation.
-- `tests/`: focused 0.99.1 regressions and synthetic control fixtures.
-- `evals/`: deterministic evaluation corpus contract.
+- Root Python modules: runtime/control implementation.
+- `test_*.py`: focused regressions and synthetic control fixtures.
+- `evals/`: deterministic evaluation corpus.
 - `scripts/`: public deterministic validation entry point.
 - `examples/`: synthetic profile and Job contracts.
-- `docs/`: current architecture, runtime, operations, release, and roadmap material.
-- `releases/0.99.1/`: public export metadata and current-tree SHA-256 manifest.
-- `release-evidence/0.99.1/`: clearly labeled canonical/private release evidence.
+- `docs/`: architecture, operations, release notes, roadmap, and anonymized case study.
+- `releases/`: sanitized public release metadata and hash manifests.
+- `release-evidence/`: sanitized summaries of canonical/private acceptance evidence.
 
 ## Safety and scope limitations
 
-This export is a public source review package. It does not include `.git`, profiles, raw prompts, raw Jobs or Tasks, operator sessions, snapshots, checkpoints, rollback backups, incident bundles, customer or institutional data, or provider credentials. Runtime integrations are adapters; provider capability is reported as supported, partial, or unsupported according to the installed surface.
-
-`1.0` Bounded Parallel Execution remains a roadmap item; bounded parallel Worker and Reviewer execution, candidate isolation, and single canonical publication are not claimed as implemented.
-
-Knowledge/RAG belongs to the optional `1.1+` evidence-driven optimization roadmap and is also not implemented by this release.
+This repository is a public source review package. It excludes real project profiles, raw Jobs/Tasks, `.control`, `.tasks`, control databases, snapshots/checkpoints, operator sessions, customer/institutional data, credentials, auth files, and Product source/evidence. Provider integrations are adapters; capability claims are limited to the surfaces actually validated by the corresponding release.
 
 ## Roadmap
 
-- **0.99.1:** Lean Execution Kernel stabilization.
-- **1.0:** Bounded Parallel Execution with Stage Ticket, frozen candidates, asynchronous Worker and Reviewer, candidate isolation, Review Package and candidate-bound Review Receipt, WIP/backpressure, integration revalidation, and one canonical publication.
-- **1.1+:** Evidence Retrieval, Knowledge/RAG/Librarian capabilities, richer evaluation, context compression, and evidence-driven optimization.
+- **0.99.2:** Operational Convergence & Verification — complete.
+- **1.0:** Bounded Parallel Execution — Stage Ticket, frozen candidate, asynchronous Worker/Reviewer handoff, candidate isolation, integration revalidation, WIP/backpressure, and single canonical publication.
+- **1.0.x:** operator UX/notification transport improvements.
+- **1.1+:** evidence-driven evaluation/retrieval/knowledge optimizations when real usage proves the need.

@@ -1,0 +1,18 @@
+{
+  "version": "0.99.2",
+  "canonical_build_id": "0.99.2+20260914.1",
+  "control_schema_version": 5,
+  "implementation_status": "COMPLETE",
+  "canonical_validation_summary": {
+    "integrated_suite": "1563/1563 PASS",
+    "focused_0992_acceptance": "39 PASS",
+    "deterministic_eval_release_gate": "PASS",
+    "managed_local_runtime_canary": "PASS",
+    "release_hash_manifest": "152/152 MATCH"
+  },
+  "not_live_proven": [
+    "persistent-session destructive failure injection",
+    "reviewer-model live failure recovery"
+  ],
+  "note": "Sanitized summary only; raw private runtime/control evidence is not included."
+}

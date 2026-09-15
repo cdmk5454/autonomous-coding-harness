@@ -1,11 +1,19 @@
 # Anonymized engineering case study
 
-The Harness has been exercised in a real-world legacy multi-module web development workflow. This account intentionally omits the organization, system, modules, schemas, endpoints, screens, and requirements.
+The Harness has been exercised in a real-world legacy multi-module web development workflow. This account intentionally omits the organization, system, modules, schemas, endpoints, screens, credentials, and business requirements.
 
-A coding-agent runtime failure can leave writer ownership ambiguous even after the client process stops. The 0.99.1 execution path treats provider session state and filesystem write authority separately. A persistent runtime is aborted and queried within a bound before replacement writer authority is granted. An unconfirmed quiescence result preserves the candidate and blocks replacement.
+## 0.99.1 — correctness first
 
-When a Job fails after changing files, rollback is scoped to that Job's accepted prestate. Previously accepted batch changes remain preserved. Snapshot, candidate, and changed-file evidence provide the custody boundary used by recovery.
+A coding-agent runtime failure can leave writer ownership ambiguous even after the client process stops. The Lean Execution Kernel separates provider/session state from filesystem write authority: replacement writer authority is withheld until the prior writer is quiesced or otherwise safely fenced. Scoped rollback preserves previously accepted batch changes, and Build/Test/Review/Verification evidence remains bound to the frozen candidate and contract.
 
-Runtime and provider failures enter technical recovery with zero product retry delta. A verified product defect uses the separate semantic retry budget. This prevents infrastructure instability from being reported as repeated product failure.
+## What real workload evidence exposed
 
-Worker completion alone does not establish success. Build, Test, Review, and Verification produce separate evidence bound to the frozen contract and candidate. Missing, stale, or mismatched evidence blocks publication and prevents false success.
+After the correctness baseline was established, Product usage showed a different class of cost: recoverable runtime failures could still return to a human too early, semantic rework could be fragmented across separately enqueued Jobs, Review finalization failures could obscure where the failure actually occurred, and repeated activity did not necessarily mean the Job was converging toward Acceptance.
+
+## 0.99.2 — operational convergence
+
+The next release kept the single-worker topology and addressed those measured costs instead of adding more agents. It introduced bounded same-Job technical recovery, explicit cross-Job semantic rework lineage, typed Review-plan diagnostics, finalization-only retries, conservative cross-rework Review evidence reuse, non-blocking convergence signals derived from durable records, and an actual Git rollback rehearsal proving restoration to the exact prior accepted state.
+
+The design rule remained unchanged: technical/runtime failure is not Product semantic failure, activity is not meaningful progress, and meaningful progress is not automatically goal convergence.
+
+The next major milestone is bounded parallel execution, not an unrestricted multi-agent society.

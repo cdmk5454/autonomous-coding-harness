@@ -1,0 +1,29 @@
+{
+  "version": "0.99.2",
+  "build_id": "0.99.2-public-sanitized",
+  "scope": "PUBLIC_SANITIZED_RELEASE_DELTA",
+  "hash_algorithm": "SHA-256",
+  "self_reference": "This manifest hashes files intentionally updated or added by the public 0.99.2 release commit; it excludes itself and does not re-claim unchanged 0.99.1 public files.",
+  "files": [
+    {"path":"README.md","sha256":"66f35f63f768df655f60e669fd820724090f69632266176289df91e2527a027e"},
+    {"path":"VERSION","sha256":"0bc0f0671b58b7f7282b6fbebcc2dc51d30a99d9ae70b180d2eb253c102c3e01"},
+    {"path":"chatgpt_control.py","sha256":"78a03350c6c766c2a6de043869b8332ad6feec42dd2cfa7f2f23a992320a5d5c"},
+    {"path":"convergence_signals.py","sha256":"5a84d399f0108f39aac130fe902ad41966ac9af390e2669f891edc3c3cea29d6"},
+    {"path":"docs/CHANGELOG.md","sha256":"c46a0788212e43ef8afac3ef8270c02efdea4483eb424a42913f6bc1e61146d5"},
+    {"path":"docs/PATCH_0.99.2.md","sha256":"a0bb8b81bfa1769826ab95239e20118b9da04aa2f91cf3042aa34e3774de35c2"},
+    {"path":"docs/PUBLIC_VALIDATION_REPORT_0.99.2.md","sha256":"69dca39cf36aac49e5348458a12d32c64970638141e52febf9854b619d18d542"},
+    {"path":"docs/REAL_WORLD_CASE_STUDY.md","sha256":"9b6c82de75162ba0e3323cbe5ca7c29afe7addd082c8f3523782d70f3900af29"},
+    {"path":"docs/ROADMAP.md","sha256":"05aade91d16d7d31b730cb1e10269efa71677fd462dbabe6ab0dcf0823011b3f"},
+    {"path":"harness_service.py","sha256":"c678e004716a4c1756152300f27cdbd4ca77a7a42a255ad0daf2f73b27b1ffa1"},
+    {"path":"job_contract.py","sha256":"e1589466b84766fd804705ec664b6a4c06ab2e4c59b8d1a703b2d5141070b5b8"},
+    {"path":"job_queue.py","sha256":"76cc0a20576503d0035133b60aff5168dc849d0e9689db3222237f6a98a48324"},
+    {"path":"manager.py","sha256":"101aaf27726c0fde33ad5f630b05cde2b7e4d9946bfef945393fbd922b7fbd3f"},
+    {"path":"release-evidence/0.99.2/canonical-release-runtime-manifest.json","sha256":"c1f2439059751b10c81dd720164dbd9bc11784676342c6c122eef1810711bf26"},
+    {"path":"releases/0.99.2/runtime-manifest.json","sha256":"dbe581fb403272cc0047a6c5f1b66eed4f8241cd63d18b8bd485c21bfcbcb44d"},
+    {"path":"review_evidence.py","sha256":"d1a6925cd26741ba5b5c630ea6a04cc8e53d081dc1173ab6258f2cc4e2fa6f85"},
+    {"path":"reviewer.py","sha256":"1527d735546fd3a7a42f302faf7cd4c9adb03462a4671fef5e7767cd50bd5101"},
+    {"path":"task_state.py","sha256":"431a4186b5d59d5582eea30399c495589189822d6167829c5745966ff4b2630c"},
+    {"path":"test_0992_operational_convergence.py","sha256":"9c2737680c1372890e63e8679e552c7bc52b0a137b5ab3a2c77ef4d876099f4f"},
+    {"path":"test_0992_rollback_rehearsal.py","sha256":"cb70631af4eadf91d89c058747b74335b381f5def59f327e9d67d08b492e342c"}
+  ]
+}
