@@ -1,0 +1,13 @@
+{
+  "version": "0.99.2.1",
+  "canonical_private_build_id": "0.99.2.1+20260915.2",
+  "implementation_status": "COMPLETE",
+  "evidence_summary": {
+    "momentic_read_only_canary": "PASS (canonical release record)",
+    "stagehand_browserbase_fallback": "PASS (canonical release record)",
+    "qa_stale_result_guards": "INDEPENDENTLY_REPRODUCED_PASS",
+    "release_hashes": "97/97 MATCH",
+    "impacted_regression": "143/143 PASS"
+  },
+  "scope_note": "Sanitized summary only; no credentials, raw browser reports, customer/project data, or private task evidence."
+}

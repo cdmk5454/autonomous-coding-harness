@@ -1,0 +1,10 @@
+# 0.99.2.1 QA Backend Hotfix - Momentic read-only canary.
+# Read-only: navigation + presence assertions on a static public page only.
+# Forbidden by contract: save/delete/send/approval/DB mutation/external side effect.
+fileType: momentic/test/v2
+id: harness-readonly-canary
+name: Harness Read-Only Canary (example.com)
+url: https://example.com
+steps:
+  - checkPageContains: Example Domain
+  - assert: The page shows a prominent heading reading "Example Domain"

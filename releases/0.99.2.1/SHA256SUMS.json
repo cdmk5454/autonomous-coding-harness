@@ -1,0 +1,20 @@
+{
+  "version": "0.99.2.1",
+  "build_id": "0.99.2.1-public-sanitized",
+  "scope": "PUBLIC_SANITIZED_CORE_REVIEW_SURFACE",
+  "hash_algorithm": "SHA-256",
+  "note": "This public manifest hashes the selected sanitized core QA review surface only. Canonical/private release integrity was independently rechecked as 97/97 MATCH and is summarized separately.",
+  "files": [
+    {"path": "../../VERSION", "sha256": "f63a5d26e9c2b1c5e4cbcee91029913aacce6eb6184a10687bf6d1441e736c61"},
+    {"path": "../../README.md", "sha256": "ded356cd7c61a880377218978aa86c87b45e350cce4af544b31c377b6b1dbe44"},
+    {"path": "../../qa_browser_adapter.py", "sha256": "8f2da2d47013ce5dd0b941dc87395a9426dc55bae7a7fe476713dbcb5b1d6af5"},
+    {"path": "../../qa_browser_contract.py", "sha256": "2d8d7fbe6869958c0aaad72f2e3ff76618b06c9d872bd0171b82040785509823"},
+    {"path": "../../qa_browser_providers.py", "sha256": "e0a567914cf67a80e08fc70bb438c4c17849e00627a9a1e24cb080219c511322"},
+    {"path": "../../integrations/momentic/canary/harness-canary-readonly.test.yaml", "sha256": "8f51e8971d10587254fce4d967853710376b1b312b551a350d888e0345465ed8"},
+    {"path": "../../integrations/momentic/package.json", "sha256": "a5853b431bc65752bbe250cb7662613d3b42d7c9f7050e967fd9cacb30696b16"},
+    {"path": "../../integrations/momentic/run_momentic.bat", "sha256": "212ea344c1bd431d2d52cdf7b8ffb77081250b6997534338c2e1c72a2f97421f"},
+    {"path": "../../integrations/stagehand/package.json", "sha256": "b69c956470a305600bc001acaec970a8461ebf416f37113c14b4a93d4002f0d4"},
+    {"path": "../../integrations/stagehand/run_npm24.bat", "sha256": "d25ce8712eed0b4c5086b8d1c496a0cde2083575810045864947878f5596d4d4"},
+    {"path": "../../integrations/stagehand/run_stagehand.bat", "sha256": "7bcd22fc5799b8993ca1a59af84b1f0d69f40cea2627d94000f8445d5f90e560"}
+  ]
+}
