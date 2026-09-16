@@ -1,0 +1,26 @@
+{
+  "name": "stagehand",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.66",
+    "@ai-sdk/openai-compatible": "3.0.48",
+    "@browserbasehq/stagehand": "4.1.0",
+    "ai": "7.0.100",
+    "ajv": "8.20.0",
+    "dotenv": "17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.5.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  }
+}
