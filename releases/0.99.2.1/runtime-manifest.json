@@ -1,0 +1,19 @@
+{
+  "version": "0.99.2.1",
+  "build_id": "0.99.2.1-public-sanitized",
+  "scope": "PUBLIC_SANITIZED_EXPORT",
+  "canonical_private_release_build_id": "0.99.2.1+20260915.2",
+  "implementation_status": "COMPLETE",
+  "control_schema_version": 5,
+  "validation": {
+    "qa_focused_independent": "72/73 PASS on Linux; 1 Windows-path-only manifest test; manual hash recheck PASS",
+    "release_hash_recheck": "97/97 MATCH",
+    "impacted_0992_regression": "143/143 PASS",
+    "public_subset_smoke": "tests/test_09921_public_qa.py",
+    "live_provider_calls_in_public_export": "NOT_RUN"
+  },
+  "limitations": [
+    "This public source-review export is sanitized and does not claim byte-for-byte identity with the canonical private build.",
+    "Raw provider credentials/auth files/browser reports/private execution evidence are excluded."
+  ]
+}
