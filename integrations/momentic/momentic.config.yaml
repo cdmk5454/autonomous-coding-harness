@@ -1,0 +1,23 @@
+# Public 0.99.2.1 Momentic integration configuration.
+name: app
+include:
+  - "**/*.test.yaml"
+  - "**/*.module.yaml"
+parallel: auto
+gitMainBranch: main
+fileFormat: v2
+advanced:
+  aiActionShorthand: true
+browser:
+  disableSecondaryCacheResolution: true
+  defaultBrowserType: Google Chrome
+  timezone: Asia/Seoul
+ai:
+  useMemory: true
+  failureRecovery: true
+  agentConfig:
+    locator: v4.2
+    assertion: v4.1
+    visual-assertion: v4.0
+    text-extraction: v3.0
+    failure-recovery: v2.1
