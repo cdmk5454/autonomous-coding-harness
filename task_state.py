@@ -300,6 +300,7 @@ class TaskState:
     codex_model: str | None = None        # codex 워커용 모델 (작업별 지정, None=기본값)
     hermes_model: str = ""  # invocation-scoped provider/model; never a global default
     opencode_model: str = ""              # provider/model; user setup required before live use
+    pi_model: str = ""                    # frozen candidate-only Worker provider/model
     codex_reasoning_effort: str = "medium" # codex reasoning: low | medium | high
     worker_effective_reasoning_effort: str = "medium"
     reviewer_effective_reasoning_effort: str = "medium"
@@ -551,6 +552,9 @@ class TaskState:
     # 0.99.1 review evidence reuse: exact-input bound PASS units of the most
     # recent review round (schema review-evidence/1). See review_evidence.py.
     review_evidence: dict[str, Any] = field(default_factory=dict)
+    host_bridge_evidence: list[dict[str, Any]] = field(default_factory=list)
+    security_audit_requested: bool = False
+    security_tags: list[str] = field(default_factory=list)
     # 0.99.2 explicit contract flags and semantic lineage (cross-Job rework).
     # verification_only: the Job contract declares no source mutation; an
     # empty delta then routes to current-state validation, not failure.

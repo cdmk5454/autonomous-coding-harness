@@ -39,9 +39,16 @@ class RuntimeSelection:
 
 
 def select_runtime(requested_runtime: str, requested_model: str = "",
-                   env: Mapping[str, str] | None = None) -> RuntimeSelection:
+                   env: Mapping[str, str] | None = None, *, candidate_enabled: bool = False) -> RuntimeSelection:
     values = env if env is not None else os.environ
     requested = str(requested_runtime or "codex").casefold()
+    if requested == "pi":
+        if candidate_enabled is not True:
+            raise RuntimeSelectionError("PI_CANDIDATE_GATE_REQUIRED")
+        if not requested_model or "/" not in requested_model:
+            raise RuntimeSelectionError("PI_PROVIDER_MODEL_REQUIRED")
+        return RuntimeSelection("pi", "pi", "none", "EXPLICIT_CANDIDATE_ROUTE",
+                                False, "HOST_BOUNDARY_REQUIRED", requested_model)
     if requested == "hermes":
         if not requested_model:
             raise RuntimeSelectionError("HERMES_INVOCATION_MODEL_REQUIRED")

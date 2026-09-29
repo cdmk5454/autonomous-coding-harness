@@ -117,6 +117,9 @@ def verify_source_manifest(harness_root):
     actual_python = {p.relative_to(root).as_posix() for p in root.glob("*.py")}
     if actual_python != {name for name in files if name.endswith(".py") and "/" not in name}:
         raise RuntimeIdentityError("RUNTIME_SOURCE_INVENTORY_DRIFT")
+    overlay_python = {p.relative_to(root).as_posix() for p in (root / 'harness_11').glob('*.py')}
+    if overlay_python != {name for name in files if name.startswith('harness_11/') and name.endswith('.py')}:
+        raise RuntimeIdentityError("RUNTIME_SOURCE_INVENTORY_DRIFT")
     fingerprint = _canonical_hash(files)
     if manifest.get("source_fingerprint") != fingerprint:
         raise RuntimeIdentityError("RUNTIME_SOURCE_FINGERPRINT_MISMATCH")

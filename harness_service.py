@@ -88,6 +88,7 @@ class HarnessService:
         hermes_worker_factory=None,
         hermes_reviewer_factory=None,
         supervisor_advisor=None,
+        host_bridges=None,
         reporter: Reporter | None = None,
         instance_lock: SingleInstanceLock | None = None,
     ):
@@ -104,6 +105,10 @@ class HarnessService:
         self.hermes_worker_factory = hermes_worker_factory
         self.hermes_reviewer_factory = hermes_reviewer_factory
         self.supervisor_advisor = supervisor_advisor
+        if host_bridges is None:
+            from host_bridges import HostBridges
+            host_bridges = HostBridges.discover(self.control_root)
+        self.host_bridges = host_bridges
         self.reporter = reporter or Reporter()
         self._instance_lock = instance_lock or SingleInstanceLock()
         self._lease_guard = threading.Lock()
@@ -1544,6 +1549,8 @@ class HarnessService:
             if snapshot is None:
                 raise HarnessServiceError("MATERIALIZATION_SNAPSHOT_REQUIRED")
             request = JobRequest.from_mapping(job["request"], allowed_modules=available)
+            if request.worker == 'pi' and self.isolated_execution is None:
+                raise HarnessServiceError('PI_EXECUTION_OWNER_REQUIRED')
             policy = resolve_effective_policy(profile_id=profile.id,
                 policy_snapshot_sha256=context["policy_snapshot_sha256"],
                 job_policy_refs=request.policy_refs, policy_overlays=request.policy_overlays)
@@ -1623,7 +1630,7 @@ class HarnessService:
                     advisor=getattr(self, 'supervisor_advisor', None), boundary='ADMISSION')
             except SupervisorGateError as exc:
                 raise HarnessServiceError(exc.code) from None
-            return repository.materialize(job, context=context, policy=policy,
+            execution = repository.materialize(job, context=context, policy=policy,
                 baseline_hash=baseline_hash, execution_surface_hash=surface,
                 extra={"runtime_snapshot_ref": str(snapshot.root),
                        "supervisor_admission": admission,
@@ -1636,6 +1643,12 @@ class HarnessService:
                        "verification_contract": verification_contract,
                        "verification_environment_hash": verification_environment_hash,
                        "current_requirement": job.get("current_requirement", request.requirement)})
+            if self.host_bridges is not None:
+                try:
+                    self.host_bridges.materialized(job, execution, policy)
+                except Exception:
+                    pass  # Optional shadow evidence has no dispatch authority.
+            return execution
 
     def enforce_supervisor_boundary(self, task, *, boundary='SEMANTIC_RISK', exception=''):
         from control_repository import ControlRepository
@@ -1871,6 +1884,7 @@ class HarnessService:
             profile=execution_profile,
         )
         task.hermes_model = effective_model if effective_worker == "hermes" else ""
+        task.pi_model = effective_model if effective_worker == "pi" else ""
         task.requested_worker = request.worker
         task.requested_model = request.model
         task.original_worker = request.worker
@@ -1976,6 +1990,8 @@ class HarnessService:
             task.task_mode = "ANALYSIS"
         task.context_refs = list(request.context_refs)
         task.qa_type = request.qa_type
+        task.security_audit_requested = request.security_audit
+        task.security_tags = list(request.security_tags)
         task.hold_scope = request.hold_scope
         task.machine_verified = request.machine_verified
         task.outer_attempt = int(reservation.get("execution_attempt", 0))
@@ -2093,9 +2109,13 @@ class HarnessService:
             except RuntimeIdentityError as exc:
                 raise HarnessServiceError(exc.code) from exc
             manager = self.manager_factory(**manager_kwargs)
+            manager.host_bridges = self.host_bridges
             if self.isolated_execution is not None:
                 self.isolated_execution.bind(task)
-                manager.isolated_opencode_worker_factory = self.isolated_execution.worker
+                if task.worker == 'pi':
+                    manager.isolated_pi_worker_factory = self.isolated_execution.worker
+                else:
+                    manager.isolated_opencode_worker_factory = self.isolated_execution.worker
             if task.worker == "hermes":
                 if self.hermes_execution_factory is not None:
                     from hermes_execution_factory import HermesExecutionFactory

@@ -193,6 +193,8 @@ def _tool_error_kinds(task: TaskState) -> list[str]:
 def _task_model(task: TaskState, worker: str) -> str:
     if worker == "hermes":
         return str(task.hermes_model or "")
+    if worker == "pi":
+        return str(task.pi_model or "")
     if worker == "codex":
         return str(task.codex_model or "")
     if worker == "opencode":
@@ -449,6 +451,14 @@ class Manager:
           에 대한 race 를 원천 차단한다.
         """
         wt = self.choose_worker(task)
+        if wt == "pi":
+            from pi_worker import PiWorkerError
+            factory = getattr(self, "isolated_pi_worker_factory", None)
+            if not callable(factory) or not getattr(task, "_isolated_pi", False):
+                raise PiWorkerError("PI_EXECUTION_OWNER_REQUIRED")
+            if not task.pi_model or task.retry_model not in {"", task.pi_model}:
+                raise PiWorkerError("PI_MODEL_BINDING_MISMATCH")
+            return factory(model=task.pi_model), "pi"
         if wt == "hermes":
             from hermes_runtime_adapter import HermesError
             from hermes_worker import HermesWorker
@@ -1850,6 +1860,11 @@ class Manager:
                             state=state,
                             exit_code=event.get("exit_code"),
                         )
+                    elif event_type == "HEARTBEAT" and task.runtime_process_id:
+                        from bounded_execution import renew_process
+                        process = repository.runtime_process(task.runtime_process_id)
+                        if process and process.get("runtime") == task.worker:
+                            renew_process(repository, task.job_id, process["process_identity"])
                 current = dict(task.execution_runtime or {})
                 if event_type == "STARTED" or current.get("execution_id") != execution_id:
                     current = {}
@@ -2206,7 +2221,7 @@ class Manager:
                 })
             worker_results.append(wr)
 
-            if (getattr(wr, "execution_failure_code", "") in CODEX_IPC_FAILURES or ((actual_worker == "hermes" or getattr(task, "_isolated_opencode", False)) and getattr(wr, "execution_failure_code", "") and not getattr(wr, "qa_request", {}))):
+            if (getattr(wr, "execution_failure_code", "") in CODEX_IPC_FAILURES or ((actual_worker in {"hermes", "pi"} or getattr(task, "_isolated_opencode", False)) and getattr(wr, "execution_failure_code", "") and not getattr(wr, "qa_request", {}))):
                 task.failure_code = wr.execution_failure_code
                 task.failure_reason = wr.execution_failure_code
                 task.failure_stage = "WORKER"
@@ -3854,6 +3869,21 @@ class Manager:
                 and result.review_result is not None
                 and result.review_result.status in REVIEW_INFRA_STATUSES
             )
+            bridge = getattr(self, 'host_bridges', None)
+            if bridge is not None and result.review_result is not None:
+                try:
+                    observed = bridge.review_shadow(task, result.review_result)
+                    task.host_bridge_evidence.append(observed)
+                except Exception:
+                    task.host_bridge_evidence.append({'kind': 'REVIEW_SHADOW', 'status': 'SAFE_FALLBACK'})
+            if (bridge is not None and not result.success
+                    and task.retry_domain == 'PRODUCT_SEMANTIC_RETRY'):
+                try:
+                    observed = bridge.semantic_failure(task, reason=str(task.failure_code),
+                        event_id=f'{task.attempt_id}:{attempt}')
+                    task.host_bridge_evidence.append(observed)
+                except Exception:
+                    task.host_bridge_evidence.append({'kind': 'SEMANTIC_ADVISORY', 'status': 'SAFE_FALLBACK'})
             if not result.success and not review_infrastructure_failure:
                 fingerprint, core_fingerprint = failure_fingerprint(task)
                 task.failure_fingerprint = fingerprint

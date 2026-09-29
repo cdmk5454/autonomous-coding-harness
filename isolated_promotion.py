@@ -225,12 +225,12 @@ class IsolatedCanonicalPromotion:
         if custody is not None:
             custody.verify_origin()
         if custody is not None and (allocation.resolve()!=custody.root/'allocation.json'
-                or cleanup.get('boundary') not in {'docker-opencode/1', 'harness-current-input/1'}):
+                or cleanup.get('boundary') not in {'docker-opencode/1','docker-pi/1','harness-current-input/1'}):
             raise CandidateError('CANDIDATE_CUSTODY_PROOF_INVALID')
         if cleanup.get('boundary') == 'harness-current-input/1':
             from canonical_revalidation import verify_custody
             verify_custody(task, service, record, cleanup)
-        if cleanup.get('boundary') == 'docker-opencode/1':
+        if cleanup.get('boundary') in {'docker-opencode/1','docker-pi/1'}:
             expected = {'execution_id':task.execution_id, 'job_id':task.job_id,
                 'candidate_id':task.candidate_id, 'attempt_id':task.attempt_id, 'execution_epoch':task.execution_epoch}
             if (any(cleanup.get(k) != v for k,v in expected.items())

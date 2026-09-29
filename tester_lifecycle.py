@@ -89,7 +89,7 @@ def run_recovery_attempt(task, invoke, *, recovery_limit=1, operator_rearm=False
 
 
 def finish_worker_runtime(task, result=None):
-    if (task.worker!='hermes' and not getattr(task, '_isolated_opencode', False)) or not task.control_repository_path:return
+    if (task.worker not in {'hermes','pi'} and not getattr(task, '_isolated_opencode', False)) or not task.control_repository_path:return
     repo=ControlRepository(task.control_repository_path)
     prior=repo.attempt_outcome(task.attempt_id)
     if prior and prior.get('status')=='RUNNING':
@@ -100,7 +100,7 @@ def finish_worker_runtime(task, result=None):
 
 
 def fresh_worker_attempt(task):
-    if task.worker!='hermes' and not getattr(task, '_isolated_opencode', False):return
+    if task.worker not in {'hermes','pi'} and not getattr(task, '_isolated_opencode', False):return
     # Called only after Manager has authorized a semantic retry and applied its
     # existing disposition. A new identity never revives the old runtime.
     if task.failure_type not in {'build','test','review'} or task.fix_scope=='NON_RETRYABLE':
@@ -110,7 +110,9 @@ def fresh_worker_attempt(task):
     if not previous or previous.get('status')=='RUNNING':
         raise ValueError('HERMES_PREVIOUS_ATTEMPT_NOT_TERMINAL')
     aid=task.task_id+'-WORKER-'+uuid.uuid4().hex
-    task._record_execution_attempt('WORKER',aid,task.opencode_model if getattr(task, '_isolated_opencode', False) else task.hermes_model)
+    model = (task.pi_model if task.worker == 'pi' else task.opencode_model
+             if getattr(task, '_isolated_opencode', False) else task.hermes_model)
+    task._record_execution_attempt('WORKER',aid,model)
     task.attempt_id=aid
     task.product_semantic_retry_count+=1
     task.retry_domain='PRODUCT_SEMANTIC_RETRY'

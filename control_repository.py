@@ -351,7 +351,7 @@ class ControlRepository:
         stat = self.path.stat()
         self._database_file_identity = (stat.st_dev, stat.st_ino)
         with self.hold():
-            if self._connection.execute("PRAGMA user_version").fetchone()[0] not in {SCHEMA_VERSION, 6}:
+            if self._connection.execute("PRAGMA user_version").fetchone()[0] not in {SCHEMA_VERSION, 6, 7}:
                 raise RepositoryError("CONTROL_SCHEMA_UNSUPPORTED")
             required = {
                 'control_state','logical_jobs','executions','attempts','materializations',
@@ -1753,6 +1753,17 @@ class ControlRepository:
             payload["control_epoch"] = __import__("control_epoch").current(self._connection)
             payload["observed_runtime"] = runtime
             payload["harness_process_incarnation"] = provenance.get("process_incarnation", "NOT_CAPTURED")
+            if attempt["role"] == "WORKER":
+                from bounded_execution import bind_process
+                execution_job = self._connection.execute(
+                    "SELECT job_id FROM executions WHERE execution_id=?", (attempt["execution_id"],)
+                ).fetchone()
+                if execution_job is None:
+                    raise RepositoryError("MATERIALIZED_EXECUTION_MISSING")
+                try:
+                    bind_process(self, execution_job[0], process_identity)
+                except ValueError as exc:
+                    raise RepositoryError(str(exc)) from exc
             self._connection.execute(
                 "INSERT INTO runtime_processes VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (process_id, attempt_id, binding_id or None, runtime, int(pid),
@@ -1817,7 +1828,7 @@ class ControlRepository:
                 raise RepositoryError("FOREIGN_ATTEMPT")
             process = self.active_runtime_process(attempt_id)
             if not process:
-                if self._connection.execute("PRAGMA user_version").fetchone()[0] != 6:
+                if self._connection.execute("PRAGMA user_version").fetchone()[0] not in {6, 7}:
                     raise RepositoryError("RUNTIME_PROCESS_NOT_FOUND")
                 if observation.get("identity") != identity:
                     raise RepositoryError("HEARTBEAT_IDENTITY_MISMATCH")

@@ -13,7 +13,7 @@ from qa_quarantine import CandidateError, validate_qa_policy
 from policy_catalog import validate_policy_overlays
 
 
-WORKER_TYPES = ("droid", "codex", "opencode", "hermes")
+WORKER_TYPES = ("droid", "codex", "opencode", "hermes", "pi")
 
 # Canonical Droid custom model registry (0.9.0.6).  The Droid-side custom model
 # configuration owns every per-model thinking/reasoning setting; the Harness
@@ -90,6 +90,10 @@ _ALLOWED_FIELDS = {
     "reasoning_effort",
     "target_modules",
     "target_resources",
+    "shared_resources",
+    "pi_candidate",
+    "security_audit",
+    "security_tags",
     "commit_summary",
     "max_outer_attempts",
     "depends_on",
@@ -104,6 +108,7 @@ _ALLOWED_FIELDS = {
     "operator_label",
     "external_delivery",
     "operation_capabilities",
+    "subagents",
     # 0.99.2.x (F04): approved frozen impact evidence for HIGH/CRITICAL
     # execution contexts. Operator-declared evidence only; never model prose.
     "impact_evidence",
@@ -250,6 +255,11 @@ class JobRequest:
     operator_label: str = ""
     external_delivery: dict = field(default_factory=dict)
     operation_capabilities: tuple[str, ...] = ()
+    subagents: dict = field(default_factory=dict)
+    shared_resources: tuple[dict, ...] = ()
+    pi_candidate: bool = False
+    security_audit: bool = False
+    security_tags: tuple[str, ...] = ()
     rework_of_job_id: str = ""
     verification_only: bool = False
     impact_evidence: tuple[str, ...] = ()
@@ -277,6 +287,16 @@ class JobRequest:
         worker = str(data.get("worker", "codex")).strip().casefold()
         if worker not in WORKER_TYPES:
             raise JobContractError("INVALID_WORKER", "jobs[].worker")
+        pi_candidate = data.get("pi_candidate", False)
+        if type(pi_candidate) is not bool or (worker == "pi" and not pi_candidate) or (worker != "pi" and pi_candidate):
+            raise JobContractError("PI_CANDIDATE_GATE_REQUIRED", "jobs[].pi_candidate")
+        security_audit = data.get('security_audit',False)
+        security_tags = data.get('security_tags',[])
+        from harness_11.review_support import SECURITY_TAGS
+        if (type(security_audit) is not bool or type(security_tags) is not list
+                or len(security_tags)>len(SECURITY_TAGS)
+                or any(type(tag) is not str or tag not in SECURITY_TAGS for tag in security_tags)):
+            raise JobContractError('SECURITY_AUDIT_CONTRACT_INVALID','jobs[].security_audit')
 
         default_model = CODEX_MODELS[0] if worker == "codex" else DROID_DEFAULT_CODING_MODEL if worker == "droid" else ""
         model = str(data.get("model") or default_model).strip()
@@ -291,9 +311,10 @@ class JobRequest:
                 resolve_droid_model(model)
             except JobContractError as exc:
                 raise JobContractError("INVALID_MODEL", "jobs[].model") from exc
-        elif worker == "hermes":
+        elif worker in {"hermes", "pi"}:
             if not _OPENCODE_MODEL_RE.fullmatch(model):
-                raise JobContractError("HERMES_PROVIDER_MODEL_REQUIRED", "jobs[].model")
+                raise JobContractError("HERMES_PROVIDER_MODEL_REQUIRED" if worker == "hermes"
+                                       else "PI_PROVIDER_MODEL_REQUIRED", "jobs[].model")
         elif not _OPENCODE_MODEL_RE.fullmatch(model):
             raise JobContractError("OPENCODE_MODEL_REQUIRED", "jobs[].model")
 
@@ -338,6 +359,24 @@ class JobRequest:
             canonical = canonical_module + normalized[len(normalized.split("/", 1)[0]):]
             if canonical.casefold() not in {item.casefold() for item in resources}:
                 resources.append(canonical)
+
+        raw_shared = data.get("shared_resources", [])
+        if not isinstance(raw_shared, list) or len(raw_shared) > 32:
+            raise JobContractError("INVALID_SHARED_RESOURCES", "jobs[].shared_resources")
+        from harness_11.core import Resource, BoundaryError
+        shared = []
+        try:
+            for entry in raw_shared:
+                if not isinstance(entry, dict) or set(entry) != {"key", "access"}:
+                    raise JobContractError("INVALID_SHARED_RESOURCES", "jobs[].shared_resources")
+                resource = Resource(**entry)
+                if resource.key.split('/', 1)[0] not in {"repo", "build", "port", "db"}:
+                    raise JobContractError("INVALID_SHARED_RESOURCES", "jobs[].shared_resources")
+                record = {"key": resource.key, "access": resource.access}
+                if record not in shared:
+                    shared.append(record)
+        except BoundaryError as exc:
+            raise JobContractError("INVALID_SHARED_RESOURCES", "jobs[].shared_resources") from exc
 
         commit_summary = _clean_text(
             data.get("commit_summary", ""),
@@ -437,6 +476,23 @@ class JobRequest:
                 )
             if capability not in capabilities:
                 capabilities.append(capability)
+        subagents = data.get("subagents", {})
+        if not isinstance(subagents, Mapping) or set(subagents) - {"policy", "max_parallel", "writer_allowed", "roles"}:
+            raise JobContractError("SUBAGENT_POLICY_INVALID", "jobs[].subagents")
+        subagents = dict(subagents)
+        if subagents:
+            policy = subagents.get("policy", "DENY")
+            maximum = subagents.get("max_parallel", 0)
+            roles = subagents.get("roles", [])
+            if (policy not in {"DENY", "ALLOW", "RECOMMEND"}
+                    or type(maximum) is not int or not 0 <= maximum <= 8
+                    or (policy == "DENY") != (maximum == 0)
+                    or subagents.get("writer_allowed", False) is not False
+                    or not isinstance(roles, list) or len(roles) > maximum
+                    or any(not isinstance(role, str) or not _REFERENCE_RE.fullmatch(role) for role in roles)):
+                raise JobContractError("SUBAGENT_POLICY_INVALID", "jobs[].subagents")
+            subagents = {"policy": policy, "max_parallel": maximum,
+                         "writer_allowed": False, "roles": list(dict.fromkeys(roles))}
         rework_of = str(data.get("rework_of_job_id", "") or "").strip()
         if rework_of and not _CLIENT_ID_RE.fullmatch(rework_of):
             raise JobContractError("INVALID_REWORK_TARGET", "jobs[].rework_of_job_id")
@@ -465,6 +521,11 @@ class JobRequest:
             operator_label=operator_label,
             external_delivery=external_delivery,
             operation_capabilities=tuple(capabilities),
+            subagents=subagents,
+            shared_resources=tuple(shared),
+            pi_candidate=pi_candidate,
+            security_audit=security_audit,
+            security_tags=tuple(dict.fromkeys(security_tags)),
             rework_of_job_id=rework_of,
             verification_only=verification_only,
             impact_evidence=tuple(
@@ -507,6 +568,16 @@ class JobRequest:
                 payload[name] = getattr(self, name)
         if self.operation_capabilities:
             payload["operation_capabilities"] = list(self.operation_capabilities)
+        if self.subagents:
+            payload["subagents"] = dict(self.subagents)
+        if self.shared_resources:
+            payload["shared_resources"] = list(self.shared_resources)
+        if self.pi_candidate:
+            payload["pi_candidate"] = True
+        if self.security_audit:
+            payload['security_audit'] = True
+        if self.security_tags:
+            payload['security_tags'] = list(self.security_tags)
         if self.rework_of_job_id:
             payload["rework_of_job_id"] = self.rework_of_job_id
         if self.verification_only:

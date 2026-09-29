@@ -370,7 +370,7 @@ class JobStore:
             try:
                 authority = json.loads(authority_path.read_text(encoding="utf-8"))
                 from control_repository import SCHEMA_VERSION
-                if authority.get("authority") != "SQLITE" or authority.get("schema_version") not in {1, 2, SCHEMA_VERSION, 6}:
+                if authority.get("authority") != "SQLITE" or authority.get("schema_version") not in {1, 2, SCHEMA_VERSION, 6, 7}:
                     raise QueueError("CONTROL_AUTHORITY_INVALID")
                 self.repository = ControlRepository(self.root / "control.sqlite3", read_only=self.read_only)
             except (OSError, ValueError, RepositoryError) as exc:

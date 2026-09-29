@@ -1,25 +1,42 @@
-"""Production OpenCode custody: host candidate, ephemeral Worker view, sealed handoff.
+"""Isolated OpenCode/Pi custody: host candidate, ephemeral Worker view, sealed handoff.
+
 
 The host is trusted. Runtime output cannot write the allocation, authority, source
+
 snapshot or publication receipts. Unknown custody is fenced, never reconstructed.
+
 """
+
 from pathlib import Path
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 import fnmatch
+
 import hashlib
+
 import json
+
 import os
 import re
 import shutil
+
 import stat
+
 import subprocess
+
 import uuid
 
+
+
 from canonical_ownership import canonical_ownership
+
 from hermes_boundary import atomic, read, write_once
+
 from opencode_boundary import IsolatedOpenCodeRuntimeAdapter, MODEL, SECRET_NAMES
+
 from qa_quarantine import CandidateError
+
+
 
 RUNTIME = Path(r'D:\hermes\isolation\opencode-v1.18.30')
 ISOLATION_GENERATED_DIRS = {".quasar"}
@@ -80,12 +97,21 @@ def tracked_paths(root, profile):
              if parent.is_relative_to(root) and (parent/'.git').exists()}
     for repo in sorted(repos):
         process = subprocess.run([trusted_executable('git', forbidden_root=root), '-C', str(repo),
+
             'ls-files', '-z', '--cached'], capture_output=True, check=True, timeout=30,
+
             env=git_subprocess_env())
+
         for rel in process.stdout.decode('utf-8').split('\0'):
+
             if rel:
+
                 result.add((repo/rel).relative_to(root).as_posix())
+
     return result
+
+
+
 
 
 def _file_identity(st):
@@ -153,7 +179,9 @@ def _hash_inventory_file(path, expected):
 
 def inventory(root, *, include_git=False, profile=None, preserve=(), workers=None):
     """Trusted host inventory. Sensitive local config is hashed, never exported."""
+
     root = Path(root).absolute()
+
     result = {}
     safe_cap = min(32, max(1, (os.cpu_count() or 1) + 4))
     if workers is None:
@@ -167,8 +195,11 @@ def inventory(root, *, include_git=False, profile=None, preserve=(), workers=Non
     from gate_evidence import IGNORED_DIRS
     generated_dirs = IGNORED_DIRS | ISOLATION_GENERATED_DIRS
     tracked = tracked_paths(root, profile) if profile and not include_git else set()
+
     for ancestor in (root, *root.parents):
+
         st = ancestor.lstat()
+
         if stat.S_ISLNK(st.st_mode) or getattr(st, 'st_file_attributes', 0) & 0x400:
             raise CandidateError('CANDIDATE_LINK_DENIED')
     directories = [(root, root.lstat())]
@@ -225,19 +256,32 @@ def inventory(root, *, include_git=False, profile=None, preserve=(), workers=Non
             # metadata link checks without hashing Git objects or payloads.
             excluded = git_metadata and (not profile or stat.S_ISREG(st.st_mode))
             if profile and not include_git:
+
                 # Established gate output directories are excluded only for
+
                 # untracked, undeclared artifacts. Source and frozen surfaces
+
                 # keep their identity even under a conventional output name.
+
                 explicit = (rel in tracked or profile.is_local_dev_config(rel)
+
                     or profile.is_protected_path(rel)
+
                     or any(rel == p.rstrip('/') or rel.startswith(p.rstrip('/')+'/')
+
                            or fnmatch.fnmatchcase(rel, p) for p in preserve))
+
                 generated = any(part in generated_dirs | ENVIRONMENTAL_DIRS for part in Path(rel).parts)
                 if not explicit and (generated or profile.is_non_source_artifact(rel)):
+
                     # Still traverse/stat generated trees: links cannot hide in
+
                     # an excluded directory and later reach an included path.
+
                     if stat.S_ISREG(st.st_mode):
+
                         excluded = True
+
             if excluded:
                 continue
             if stat.S_ISDIR(st.st_mode):
@@ -311,77 +355,160 @@ def normalized_preserved_inventory(root, recorded, *, profile, preserve=()):
     return expected
 
 
+
+
 def secret_path(rel):
+
     return any(part.casefold() in SECRET_NAMES | {'credentials.json', '.opencode', '.config', '.vscode', '.idea', '.mcp.json', 'opencode.json', 'opencode.jsonc', '.venv', 'node_modules'}
+
                or part.casefold().startswith('.env.')
+
                or part.casefold().endswith(('.pem', '.key', '.pfx', '.p12'))
+
                for part in Path(rel).parts)
 
 
+
+
+
 def credential_loader():
+
     # Deliberately not environment driven; never serialize this return value.
+
     try:
+
         value = read(Path.home()/'.local/share/opencode/auth.json')['opencode-go']['key']
+
         if isinstance(value, str) and value.strip():
+
             return value
+
     except (OSError, ValueError, KeyError, TypeError):
+
         pass
+
     raise CandidateError('OPENCODE_PROVIDER_CREDENTIAL_UNAVAILABLE')
 
 
+
+
+
 class ProductionIsolation:
+
     def __init__(self, harness, repository, *, root=None, runtime_root=RUNTIME):
+
         self.harness, self.repository = harness, repository
+
         self.canonical = Path(harness.working_dir).resolve()
+
         key = hashlib.sha256(str(harness.control_root).casefold().encode()).hexdigest()[:16]
+
         self.root = Path(root or Path(r'D:\hermes\isolation')/('control-'+key)).absolute()
+
         for ancestor in (self.root, *self.root.parents):
+
             if ancestor.exists() and (ancestor.is_symlink() or getattr(ancestor.lstat(), 'st_file_attributes', 0) & 0x400):
+
                 raise CandidateError('CANDIDATE_LINK_DENIED')
+
         self.runtime_root = Path(runtime_root)
+
         for protected in (self.canonical, harness.profile_dir, harness.control_root,
+
                           harness.task_root, self.runtime_root):
+
             protected = Path(protected).resolve()
+
             if (self.root.resolve().is_relative_to(protected)
+
                     or protected.is_relative_to(self.root.resolve())):
+
                 raise CandidateError('ISOLATED_ALLOCATION_OVERLAP')
+
         from isolated_promotion import IsolatedCanonicalPromotion
+
         self.promoter = IsolatedCanonicalPromotion(self.canonical, self.root/'publication', repository)
 
+
+
     def preflight(self):
+
         from bounded_execution import enabled
+
         if not enabled(self.repository):
+
             raise CandidateError('BOUNDED_SCHEMA_REQUIRED')
+
         self.promoter.recover()
+
         # An unfinished allocation from another process is evidence of uncertain
+
         # ownership. Never auto-allocate a replacement view or resume its session.
+
         for manifest in self.root.glob('run-*/allocation.json'):
+
             if read(manifest).get('state') not in {'CLOSED', 'PUBLISHED'}:
+
                 raise CandidateError('ISOLATED_CUSTODY_RECOVERY_REQUIRED')
+
         self.descriptor()
 
-    def descriptor(self):
+
+
+    def descriptor(self, route='opencode'):
+        if route == 'pi':
+            from runtime_contract import descriptor_for
+            return descriptor_for('pi')
         check = self.root/'preflight'
         for name in ('candidate', 'context', 'evidence'):
+
             (check/name).mkdir(parents=True, exist_ok=True)
+
         adapter = self.adapter(check, 'PREFLIGHT', 'PREFLIGHT', 'PREFLIGHT', 'PREFLIGHT', 'PREFLIGHT')
+
         return adapter.preflight()
 
-    def adapter(self, root, execution, epoch, candidate, job, attempt):
+
+
+    def adapter(self, root, execution, epoch, candidate, job, attempt, *, route='opencode'):
+        if route == 'pi':
+            from pi_process_boundary import DockerPiProcessBoundary
+            return DockerPiProcessBoundary(candidate_dir=root/'candidate',context_dir=root/'context',
+                canonical_root=self.canonical, provider='opencode-go',model='deepseek-v4.1-flash',
+                credential_loader=credential_loader)
         return IsolatedOpenCodeRuntimeAdapter(execution_id=execution, execution_epoch=epoch,
             candidate_id=candidate, job_id=job, attempt_id=attempt,
+
             candidate_dir=root/'candidate', context_dir=root/'context',
+
             runtime_binary=self.runtime_root/'opencode', provider_catalog=self.runtime_root/'provider-catalog.json',
+
             credential_loader=credential_loader, canonical_root=self.canonical, evidence_dir=root/'evidence')
+
+
 
     def __call__(self, job, repository):
         from harness_service import HarnessService
+
         from run import SingleInstanceLock
+
         from bounded_execution import enabled
+
         if repository is not self.repository or not enabled(repository):
+
             raise CandidateError('BOUNDED_SCHEMA_REQUIRED')
+
         request = job['request']
-        if request.get('worker') != 'opencode' or request.get('model') != MODEL:
+
+        route = request.get('worker')
+        if route == 'pi':
+            from pi_process_boundary import PI_MODEL, PI_PACKAGE, PI_VERSION
+            if request.get('pi_candidate') is not True or request.get('model') != PI_MODEL:
+                raise CandidateError('PI_CANDIDATE_CONTRACT_REQUIRED')
+            package = PI_PACKAGE/'node_modules/@earendil-works/pi-coding-agent/package.json'
+            if (not package.is_file() or json.loads(package.read_text(encoding='utf-8')).get('version') != PI_VERSION):
+                raise CandidateError('PI_BINARY_UNAVAILABLE')
+        elif route != 'opencode' or request.get('model') != MODEL:
             raise CandidateError('ISOLATED_WORKER_ROUTE_REQUIRED')
         if repository.active_execution(job['job_id']):
             raise CandidateError('ISOLATED_EXECUTION_RECOVERY_REQUIRED')
@@ -398,30 +525,46 @@ class ProductionIsolation:
             copy_workspace_tree(self.canonical, source)
             if (inventory(self.canonical, include_git=True) != before
                     or inventory(candidate, include_git=True) != before
+
                     or inventory(source, include_git=True) != before):
+
                 raise CandidateError('CANDIDATE_BASE_MISMATCH')
             # Git includes/core.worktree are interpreted by Git itself. A
             # byte-identical .git/config can still point the copy at canonical.
             validate_git_ownership(candidate, profile)
             validate_git_ownership(source, profile)
         profile_origin = inventory(self.harness.profile_dir, include_git=True)
+
         shutil.copytree(self.harness.profile_dir, path/'profiles'/profile.id)
+
         if inventory(self.harness.profile_dir, include_git=True) != profile_origin:
+
             raise CandidateError('PROFILE_DRIFT')
+
         manifest = path/'profiles'/profile.id/'project.json'
+
         original = read(manifest)
+
         original['workspace_roots'] = [*original['workspace_roots'], str(candidate)]
+
         atomic(manifest, original)
+
         record = {'job_id': job['job_id'], 'candidate_id': 'OCAND-'+uuid.uuid4().hex,
+
             'candidate': str(candidate), 'source': str(source), 'state': 'ALLOCATED',
+
             'profile_origin': str(self.harness.profile_dir), 'profile_origin_inventory': profile_origin,
+
             'profile_origin_sha256': hashlib.sha256((self.harness.profile_dir/'project.json').read_bytes()).hexdigest()}
+
         write_once(path/'allocation.json', record)
+
         child = HarnessService(candidate, path/'profiles'/profile.id, task_root=self.harness.task_root,
             snapshot_root=self.harness.snapshot_root, manager_factory=self.harness.manager_factory,
             instance_lock=SingleInstanceLock(path/"execution.lock"),
-            supervisor_advisor=getattr(self.harness, 'supervisor_advisor', None))
-        child.isolated_execution = ExecutionCustody(self, path, record, profile)
+            supervisor_advisor=getattr(self.harness, 'supervisor_advisor', None),
+            host_bridges=getattr(self.harness, 'host_bridges', None))
+        child.isolated_execution = ExecutionCustody(self, path, record, profile, route=route)
         self.promoter.register(job, child, source)
         return child
 
@@ -460,6 +603,7 @@ class ProductionIsolation:
             manager_factory=self.harness.manager_factory,
             instance_lock=SingleInstanceLock(allocation.parent / "recovery.lock"),
             supervisor_advisor=getattr(self.harness, 'supervisor_advisor', None),
+            host_bridges=getattr(self.harness, 'host_bridges', None),
         )
         profile, _ = child._load_profile()
         preserve = [
@@ -472,7 +616,8 @@ class ProductionIsolation:
         )
         if inventory(Path(record["candidate"]), profile=profile, preserve=preserve) != expected:
             raise CandidateError("PRESERVED_CANDIDATE_CONTENT_CHANGED")
-        child.isolated_execution = ExecutionCustody(self, allocation.parent, record, profile)
+        child.isolated_execution = ExecutionCustody(self, allocation.parent, record, profile,
+            route=str(job.get('request',{}).get('worker') or 'opencode'))
         self.promoter.register_preserved(
             job, child, record["source"],
             authorized_head_refresh=authorized_head_refresh,
@@ -480,32 +625,57 @@ class ProductionIsolation:
         return child
 
 
+
+
 class ExecutionCustody:
-    def __init__(self, owner, root, record, profile):
+    def __init__(self, owner, root, record, profile, *, route='opencode'):
         self.owner, self.root, self.record, self.profile = owner, root, record, profile
+        self.route = route
         self.candidate = Path(record['candidate'])
+
         self.task = None
+
         self.adapters = []
 
+
+
     def descriptor(self):
-        return self.owner.descriptor()
+        return self.owner.descriptor(self.route)
+
 
     def bind(self, task):
+
         self.verify_origin()
+
         if self.task is not None or task.job_id != self.record['job_id']:
+
             raise CandidateError('CANDIDATE_OWNERSHIP_MISMATCH')
-        if task.worker != 'opencode' or task.opencode_model != MODEL:
+
+        if self.route == 'pi':
+            from pi_process_boundary import PI_MODEL
+            if task.worker != 'pi' or task.pi_model != PI_MODEL:
+                raise CandidateError('PI_CANDIDATE_CONTRACT_REQUIRED')
+            task._isolated_pi = True
+        elif task.worker != 'opencode' or task.opencode_model != MODEL:
             raise CandidateError('ISOLATED_WORKER_ROUTE_REQUIRED')
         self.task = task
+
         self.record.update(execution_id=task.execution_id, state='RUNNING')
+
         atomic(self.root/'allocation.json', self.record)
+
         task.candidate_id = self.record['candidate_id']
+
         task.candidate_manifest = str(self.root/'allocation.json')
-        task._isolated_opencode = True
+
+        if self.route == 'opencode':
+            task._isolated_opencode = True
         task._isolated_eol_repair = self.repair_eol
+
 
     def verify_origin(self):
         if inventory(self.record['profile_origin'], include_git=True) != self.record['profile_origin_inventory']:
+
             raise CandidateError('PROFILE_DRIFT')
 
     def repair_eol(self, task, collector, baseline):
@@ -539,90 +709,185 @@ class ExecutionCustody:
                 'normalizations':[*receipt.get('normalizations',[]), normalization]})
         return result
 
+
     def worker(self, **kwargs):
         from worker import OpenCodeWorker
         custody = self
+        if self.route == 'pi':
+            from pi_worker import PiWorker
+            class OwnedPiWorker:
+                def execute(self, requirement, working_dir, task=None):
+                    if task is not custody.task or Path(working_dir).resolve() != custody.candidate:
+                        raise CandidateError('CANDIDATE_OWNERSHIP_MISMATCH')
+                    if kwargs.get('model') != task.pi_model:
+                        raise CandidateError('PI_MODEL_BINDING_MISMATCH')
+                    return custody.work(PiWorker, kwargs, requirement, task)
+            return OwnedPiWorker()
         class OwnedWorker:
             def execute(self, requirement, working_dir, task=None):
+
                 if task is not custody.task or Path(working_dir).resolve() != custody.candidate:
+
                     raise CandidateError('CANDIDATE_OWNERSHIP_MISMATCH')
+
                 if kwargs['model'] != MODEL or task.retry_model not in {'', MODEL}:
+
                     raise CandidateError('ISOLATED_WORKER_ROUTE_REQUIRED')
+
                 return custody.work(OpenCodeWorker, kwargs, requirement, task)
+
         return OwnedWorker()
 
+
+
     def work(self, worker_type, kwargs, requirement, task):
+
         self.verify_origin()
+
         if any(not adapter.confirm_quiescence() for adapter in self.adapters):
+
             raise CandidateError('CANDIDATE_WRITER_NOT_QUIESCED')
+
         epoch = uuid.uuid4().hex
+
         task.execution_epoch = epoch
+
         root = self.root/('work-'+epoch[:12])
+
         (root/'candidate').mkdir(parents=True)
+
         (root/'context').mkdir()
+
         before = inventory(self.candidate, include_git=True)
+
         view_before = {}
+
         for rel, digest in before.items():
+
             if secret_path(rel) or self.profile.is_local_dev_config(rel) or self.profile.is_non_source_artifact(rel):
+
                 continue
+
             dest = root/'candidate'/rel
+
             dest.parent.mkdir(parents=True, exist_ok=True)
+
             shutil.copy2(self.candidate/rel, dest)
+
             view_before[rel] = digest
-        adapter = self.owner.adapter(root, task.execution_id, epoch, task.candidate_id, task.job_id, task.attempt_id)
+
+        arguments = (root, task.execution_id, epoch, task.candidate_id, task.job_id, task.attempt_id)
+        adapter = (self.owner.adapter(*arguments, route='pi') if self.route == 'pi'
+                   else self.owner.adapter(*arguments))
         self.adapters.append(adapter)
+
         def prompt_transform(text):
+
             for host, mounted in ((root/'candidate', '/workspace'), (self.candidate, '/workspace'),
+
                     (self.owner.canonical, '/workspace'),
+
                     (self.owner.harness.profile_dir, '/context/profile')):
+
                 text = text.replace(str(host), mounted).replace(str(host).replace('\\','/'), mounted)
+
             (root/'context/context.md').write_text(text, encoding='utf-8')
+
             return text
+
         worker = worker_type(**kwargs, adapter_factory=lambda: adapter,
+
             prompt_transform=prompt_transform,
+
             ephemeral_session=True)
+
         result = None
+
         try:
+
             result = worker.execute(requirement, str(root/'candidate'), task=task)
+
         finally:
+
             adapter.stop_local_server()
+
             if not adapter.confirm_quiescence():
+
                 raise CandidateError('CANDIDATE_WRITER_NOT_QUIESCED')
+
             if task.native_session_binding_id:
+
                 from control_repository import ControlRepository
+
                 ControlRepository(task.control_repository_path).update_session_state(task.native_session_binding_id, 'TERMINAL')
+
         after = inventory(root/'candidate', include_git=True)
+
         if inventory(self.candidate, include_git=True) != before:
+
             raise CandidateError('CANDIDATE_HOST_INPUT_CHANGED')
+
         changed = sorted(rel for rel in set(view_before)|set(after) if view_before.get(rel) != after.get(rel))
+
         scopes = list(task.target_resources or [])
+
         if not scopes:
+
             raise CandidateError("CANDIDATE_DECLARED_SCOPE_REQUIRED")
+
         for rel in changed:
+
             if (secret_path(rel) or self.profile.is_local_dev_config(rel) or self.profile.is_non_source_artifact(rel)
+
                     or self.profile.is_protected_path(rel)
+
                     or not any(rel == p.rstrip('/') or rel.startswith(p.rstrip('/')+'/')
+
                                or fnmatch.fnmatchcase(rel, p) for p in scopes)):
+
                 raise CandidateError('CANDIDATE_UNDECLARED_WRITE')
+
         if result.success:
+
             if not changed:
+
                 raise CandidateError('CANDIDATE_NO_MEANINGFUL_DELTA')
+
             for rel in changed:
+
                 target = self.candidate/rel
+
                 if rel in after:
+
                     target.parent.mkdir(parents=True, exist_ok=True)
+
                     shutil.copy2(root/'candidate'/rel, target)
+
                 else:
+
                     target.unlink()
+
         atomic(self.root/'cleanup.json', {**adapter.boundary_receipt(), 'state': 'QUIESCED',
+
             'imported': bool(result.success), 'host_input': inventory(self.candidate, profile=self.profile,
+
                 preserve=[*task.target_resources, *task.test_plan.get('required_tests', [])])})
+
         return result
 
+
+
     def close(self):
+
         for adapter in self.adapters:
+
             adapter.stop_local_server()
+
             if not adapter.confirm_quiescence():
+
                 raise CandidateError('CANDIDATE_WRITER_NOT_QUIESCED')
+
         self.record['state'] = 'CLOSED'
+
         atomic(self.root/'allocation.json', self.record)
+

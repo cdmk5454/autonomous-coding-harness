@@ -1234,6 +1234,20 @@ def build_and_record_context(
         budget=budget,
         context_tier=context_tier,
     )
+    if getattr(task, 'control_repository_path', '') and getattr(task, 'execution_id', ''):
+        bridge = None
+        try:
+            from host_bridges import HostBridges
+            bridge = HostBridges.discover(Path(task.control_repository_path).parent)
+            if bridge is not None:
+                observation = bridge.context_observation(task, pack, workspace=Path(workspace))
+                pack.manifest['host_bridge_observation'] = observation
+                if hasattr(task, 'host_bridge_evidence'):
+                    task.host_bridge_evidence.append(observation)
+        except Exception:
+            if bridge is not None:
+                pack.manifest['host_bridge_observation'] = {'status': 'SAFE_FALLBACK',
+                    'context_replaced': False, 'product_pass': False}
     if manifest_root is not None:
         persist_context_manifest(pack, task, manifest_root)
     return pack

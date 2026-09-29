@@ -17,6 +17,7 @@ PERMISSION_TOOL_PROFILES = {
     ("codex", "REVIEWER"): "codex-read-only-review/1",
     ("droid", "WORKER"): "droid-managed-auto-policy/1",
     ("opencode", "WORKER"): "opencode-managed-product-writer/1",
+    ("pi", "WORKER"): "pi-candidate-rw-context-ro-docker/1",
 }
 
 
@@ -46,6 +47,22 @@ def descriptor_for(runtime: str) -> RuntimeDescriptor:
     if name == "opencode":
         from opencode_runtime_adapter import OpenCodeRuntimeAdapter
         return OpenCodeRuntimeAdapter().preflight()
+    if name == "pi":
+        from pi_process_boundary import PI_VERSION
+        from runtime_adapter import RuntimeCapabilities
+        return RuntimeDescriptor(runtime='pi',version=PI_VERSION,
+            capabilities=RuntimeCapabilities(False,False,True,False,False,True,interrupt=True),
+            protocol_revision='pi-rpc-jsonl-single-attempt/1',
+            structured_output_schema_revision='harness11-pi-observation/1',
+            permission_tool_profile=permission_tool_profile('pi','WORKER'),
+            session_process_lifetime='SINGLE_ATTEMPT_PROCESS_NO_REUSE',
+            sandbox_semantics='DOCKER_ENFORCED', execution_environment='PINNED_DOCKER_CANDIDATE',
+            capability_contract={'session.create':'PARTIAL','session.read_query':'PARTIAL',
+                'turn.submit':'PARTIAL','turn.interrupt':'PARTIAL','events.subscribe':'PARTIAL',
+                'output.structured':'PARTIAL','output.schema_revision':'SUPPORTED',
+                'runtime.protocol_revision':'PARTIAL','runtime.permission_tool_semantics':'PARTIAL'},
+            live_model_validated=False,validation_disposition='NOT_RUN',
+            detail='PI_CANDIDATE_HOST_BOUNDARY_REQUIRED')
     raise RuntimeContractError("RUNTIME_NOT_REGISTERED")
 
 

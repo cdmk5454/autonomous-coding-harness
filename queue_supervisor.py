@@ -380,6 +380,14 @@ class QueueSupervisor:
                     self.harness.release_execution_lease()
                     self._last_error = getattr(exc, "code", "ISOLATED_PREFLIGHT_FAILED")
                     return {"started": False, "code": self._last_error, "running": False}
+            from bounded_execution import explicit_release_enabled, reconcile_slots
+            if explicit_release_enabled(getattr(self.store, 'repository', None)):
+                held = reconcile_slots(self.store.repository)
+                if held:
+                    self.harness.release_execution_lease()
+                    self._last_error = 'EXECUTION_SLOT_RECONCILIATION_REQUIRED'
+                    return {"started": False, "code": self._last_error,
+                            "held_jobs": held, "running": False}
             worker_probe = getattr(self.harness, "probe_worker_process_active", None)
             task_root = getattr(self.harness, "task_root", None)
             orphaned = (
@@ -904,6 +912,20 @@ class QueueSupervisor:
                     if self._retire_or_consume_wakeup():
                         return
         finally:
+            from bounded_execution import explicit_release_enabled
+            if self._single_claim is not None and explicit_release_enabled(self.store.repository):
+                from bounded_execution import release_slot
+                try:
+                    custody = getattr(self.harness, 'isolated_execution', None)
+                    if custody is not None:
+                        custody.close()
+                    release_slot(self.store.repository, self._single_claim['job_id'],
+                                 self.owner_id, custody=custody)
+                except Exception as exc:
+                    # A slot with uncertain writer custody must survive restart.
+                    self._lease_quarantined = True
+                    self._last_error = getattr(exc, 'code', type(exc).__name__)
+                    self.store.repository.set_global_stop('EXECUTION_SLOT_RELEASE_UNCERTAIN')
             if not self._lease_quarantined:
                 self.harness.release_execution_lease()
             with self._guard:
@@ -963,6 +985,16 @@ class QueueSupervisor:
                         if acquired and service is not None:
                             service.release_execution_lease()
                         self.store.record_blocked(job["job_id"], owner, getattr(exc,"code","EXECUTION_ALLOCATION_FAILED"))
+                        from bounded_execution import explicit_release_enabled, release_slot
+                        if explicit_release_enabled(repository):
+                            try:
+                                custody = getattr(service, 'isolated_execution', None)
+                                if custody is not None:
+                                    custody.close()
+                                release_slot(repository, job['job_id'], owner, custody=custody)
+                            except Exception:
+                                repository.set_global_stop('EXECUTION_SLOT_RELEASE_UNCERTAIN')
+                                self._lease_quarantined = True
                         self._last_error = getattr(exc,"code","EXECUTION_ALLOCATION_FAILED")
                     with self._guard:
                         stopping = self._stopping
