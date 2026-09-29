@@ -1,0 +1,13 @@
+{
+  "schema": "supervisor-runtime-binding/1",
+  "control_root": "D:\\kkm_test\\.control",
+  "working_root": "D:\\inha_dev",
+  "python": "D:\\hermes\\runtime-v2026.9.14\\venv\\Scripts\\python.exe",
+  "worker": "D:\\kkm_test\\hermes_no_tools_worker.py",
+  "home": "D:\\hermes\\home",
+  "receipt_path": "D:\\hermes\\supervisor-receipts.jsonl",
+  "provider": "zai",
+  "model": "glm-5",
+  "runtime_version": "runtime-v2026.9.14",
+  "api_mode": "chat_completions"
+}
