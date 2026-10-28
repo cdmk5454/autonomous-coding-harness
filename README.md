@@ -1,79 +1,69 @@
-# Autonomous Coding Harness
+# Autonomous Coding Harness — v2 Public Architecture Candidate
 
-Production-oriented execution and verification layer for AI coding agents.
+**Public, sanitized reference** for a profile-driven AI coding workflow using `AGENTS.md`, task-specific Skills, and [Paseo](https://paseo.sh/) for multi-agent orchestration. This repository describes a migration candidate, **not** a claim that all v2 runtime controls have passed production validation.
 
-Current stable public milestone: **0.99.2.1 — QA Backend Hotfix**
+## Evolution
 
-## Problem
+| Version | Responsibility | Historical source |
+| --- | --- | --- |
+| v1 / 0.99.x | Custom Python/SQLite execution control: queue, owned write scope, retries, rollback and verification | [`main` history before migration](https://github.com/cdmk5454/autonomous-coding-harness/commit/4e9393fcf56ca23f5da177dcfd63719a135f5523) |
+| v1.x reference | Frozen 1.0/1.1 source-level archive, separate from the 0.99.2.1 public baseline | [`archive/harness-1.x-reference`](https://github.com/cdmk5454/autonomous-coding-harness/tree/archive/harness-1.x-reference) |
+| v2 candidate | Declarative policy and project Profiles, explicit agent-role routing, read-only review and evidence-driven verification | This branch |
 
-AI coding agents can produce useful changes while leaving execution state, writer ownership, recovery, semantic retry, browser QA, and verification ambiguous. The Harness gives those actions a durable control boundary and keeps Product outcome separate from runtime/tool failure.
+The goal is to reduce duplicated orchestration code, while retaining the engineering lessons from v1. **The declarative v2 approach does not automatically reproduce all v1 transaction, rollback, publication, integrity or proof gates.** Missing runtime enforcement must remain an explicit limitation until implemented and tested.
 
-## What this Harness does
-
-It materializes an immutable Job contract, selects a validated project profile, runs a fenced Worker, records Git and execution evidence, applies Build/Test/Review/QA/Verification gates, preserves candidates across recovery, and keeps technical replacement separate from Product semantic rework.
-
-## Core invariants
-
-- One canonical writer owns a materialized execution surface.
-- Job scope, profile, runtime contract, and relevant policy are frozen before execution.
-- Unknown ownership, path escape, stale revision, missing evidence, and unsafe capability requests fail closed.
-- A failed or interrupted attempt preserves its candidate and prior accepted delta.
-- Review and QA evidence are reusable only while their exact proof inputs remain current.
-- Technical/provider recovery does not consume Product semantic retry/rework budget.
-- Provider success never directly sets canonical Job success; Verification remains the authority.
-- Activity is not meaningful progress; meaningful progress is not proof of goal convergence.
-- Reports and operator projections are not a second execution authority.
-
-## Current 0.99.2.1 status
-
-`0.99.2.1` implementation acceptance is complete. It keeps the 0.99.2 Operational Convergence & Verification release and adds a replaceable browser-QA backend:
-
-- vendor-neutral `QAScenario` and candidate-bound `QAExecutionResult`
-- Momentic as the primary browser QA provider
-- Stagehand v4 + Browserbase fallback for provider/infrastructure failure
-- exact `qa_execution_id` / scenario correlation to reject stale provider results
-- assertion/application failure remains terminal and cannot be overwritten by fallback success
-- typed allowed/forbidden action admission and pre-execution side-effect denial
-- secret-literal rejection before scenario persistence/materialization
-- missing/stale QA evidence blocks false success
-- Playwright deterministic regression path remains separate and preserved
-
-SQLite control schema remains `5`. Multi-Worker, Stage Ticket, Advisor, async QA scheduling, Discord migration, and Knowledge/RAG remain outside this release.
-
-## Validation evidence
-
-The canonical/private release records build `0.99.2.1+20260915.2`. Independent verification re-ran the expanded QA-focused suite (72/73 in a Linux environment, with the single failure caused by a Windows-path-only manifest test), manually rechecked release hashes as `97/97 MATCH`, reproduced the previously reported stale-result/action/secret guards, and re-ran the directly impacted 0.99.2 regression surface as `143/143 PASS`. The public repository CI remains Windows-based. See `docs/PUBLIC_VALIDATION_REPORT_0.99.2.1.md`.
-
-## Quick Start
+## Workflow (role convention, not a built-in transaction manager)
 
 ```text
-python -m unittest discover -s . -p "test_099*.py"
-python scripts/run_deterministic_eval.py
+User / job contract (goal, authorized scope, contracts, acceptance)
+           |
+           v
+Orchestrator (Claude or Codex; analysis and delegation)
+           |
+           +--> Advisor (on ambiguous or high-risk contracts; no implementation)
+           |
+           v
+Worker (LOW / MID / HIGH by semantic impact; scoped implementation)
+           |
+           v
+Build / Test and evidence capture (tooling and commands from the project)
+           |
+           v
+Cross-family Reviewer (read-only role; diff and evidence assessment)
+           |
+           v
+Orchestrator: acceptance, block or retry; human QA when required
+           |
+           v
+Reporter: evidence-bound change summary
 ```
 
-Provider-specific live QA requires external credentials and browser/provider configuration; no credentials or private execution evidence are included here.
+Paseo provides workspace, provider and orchestration capabilities. The role progression, risk tiers and gates above are **workflow policy** unless separate testable enforcement is configured. A successful Worker message or a Reviewer opinion is not proof of Build/Test/QA success.
 
-## Repository structure
+## Security and isolation boundaries
 
-- Root Python modules: runtime/control implementation.
-- `test_*.py`: focused regressions and synthetic control fixtures.
-- `integrations/momentic/`: Momentic adapter runtime/configuration surface.
-- `integrations/stagehand/`: Stagehand fallback runtime and OpenAI-compatible ClientLLM adapter.
-- `evals/`: deterministic evaluation corpus.
-- `scripts/`: public deterministic validation entry point.
-- `examples/`: synthetic profile and Job contracts.
-- `docs/`: architecture, operations, release notes, roadmap, and anonymized case study.
-- `releases/`: sanitized public release metadata and hash manifests.
-- `release-evidence/`: sanitized summaries of canonical/private acceptance evidence.
+- Paseo's `paseoTools.disabledTools` removes specific Paseo tools from the provider catalog. It **does not restrict shell or filesystem operations** by itself.
+- Codex's native `sandbox_mode: read-only` is an explicit read-only profile configuration. Other providers use their own permission/sandbox controls; a `disallowedTools` list alone is not an OS sandbox.
+- A `write scope` in policy is an instruction until supported by actual workspace/container/OS access boundaries, explicit output-diff checks and admission gates.
+- No real customer/organization profile, tokens, credentials, project mapping, operational queues or production evidence is distributed here.
+- DB access is determined by the active project's **approved** data access contract. This public package includes no DB connection credentials or live DB query runner.
 
-## Safety and scope limitations
+See [Architecture and limitations](docs/architecture.md) and [Public migration checklist](docs/migration-checklist.md).
 
-This repository is a public source review package. It excludes real project profiles, raw Jobs/Tasks, `.control`, `.tasks`, control databases, snapshots/checkpoints, operator sessions, customer/institutional data, credentials, auth files, private browser reports, and Product source/evidence.
+## Files
 
-## Roadmap
+- `AGENTS.md` — common policy and contract rules (from supplied reference snapshot)
+- `skills/{planning,project-context,backend,frontend,sql,testing,debugging,review,reporter}/SKILL.md` — custom reusable task procedures selected from the supplied snapshot
+- `hooks/validation.md` — pre-completion checklist; documentation, not a standalone security mechanism
+- `config.sample.json` — intentionally **non-executable illustration**, stripped of machine paths, profiles IDs, live model aliases and credentials
+- `profiles/sample-project/` — synthetic profile layout for understanding expected references; adapt before use
 
-- **0.99.2.1:** QA Backend Hotfix — complete.
-- **Operational acceptance:** collect real Job/QA data before 1.0.
-- **1.0:** Bounded Parallel Execution — Stage Ticket, frozen candidate, Worker 1 + Reviewer 1 async first, candidate isolation, integration revalidation, WIP/backpressure, Review Package/Receipt, DAILY/SLEEP review routing, and Worker runtime bake-off.
-- **1.0.x:** operator UX/notification transport improvements.
-- **1.1+:** evidence-driven evaluation/retrieval/knowledge optimization when real usage proves the need.
+## Validation status
+
+Static JSON / Markdown structure checks and a curated package exclusion audit are performed when building this public candidate. No Paseo daemon, model-provider, end-to-end job, live DB, rollback, multi-worker or production QA validation is implied by those checks. Consult the migration checklist for the required runtime gates before calling v2 operational.
+
+## References
+
+- [Paseo MCP/tool-catalog boundaries](https://paseo.sh/docs/mcp)
+- [Paseo provider options](https://paseo.sh/docs/sdk/provider-options)
+- [Paseo security](https://paseo.sh/docs/hub/security)

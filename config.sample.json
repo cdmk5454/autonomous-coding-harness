@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "daemon": {
+    "listen": "127.0.0.1:6767",
+    "mcp": {
+      "injectIntoAgents": true
+    }
+  },
+  "agents": {
+    "providers": {
+      "codex-orch": {
+        "extends": "codex",
+        "label": "Codex Orchestrator",
+        "options": {
+          "sandbox_mode": "read-only",
+          "approval_policy": "never"
+        },
+        "paseoTools": {
+          "disabledTools": [
+            "create_terminal",
+            "send_terminal_keys",
+            "kill_terminal"
+          ]
+        }
+      },
+      "codex-worker": {
+        "extends": "codex",
+        "label": "Codex Worker",
+        "options": {
+          "sandbox_mode": "workspace-write"
+        },
+        "paseoTools": {
+          "disabledTools": [
+            "create_agent",
+            "send_agent_prompt",
+            "create_workspace",
+            "create_terminal"
+          ]
+        }
+      },
+      "codex-readonly": {
+        "extends": "codex",
+        "label": "Codex Reviewer",
+        "options": {
+          "sandbox_mode": "read-only",
+          "approval_policy": "never"
+        },
+        "paseoTools": {
+          "disabledTools": [
+            "create_agent",
+            "send_agent_prompt",
+            "create_workspace",
+            "create_terminal"
+          ]
+        }
+      },
+      "claude-worker": {
+        "extends": "claude",
+        "label": "Claude Worker",
+        "paseoTools": {
+          "disabledTools": [
+            "create_agent",
+            "send_agent_prompt",
+            "create_workspace",
+            "create_terminal"
+          ]
+        }
+      },
+      "claude-readonly": {
+        "extends": "claude",
+        "label": "Claude Reviewer (provider-native sandbox required)",
+        "disallowedTools": [
+          "Edit",
+          "Write",
+          "NotebookEdit",
+          "Bash"
+        ],
+        "paseoTools": {
+          "disabledTools": [
+            "create_agent",
+            "send_agent_prompt",
+            "create_workspace",
+            "create_terminal"
+          ]
+        }
+      }
+    }
+  }
+}

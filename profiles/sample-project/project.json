@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "sample-project",
+  "display_name": "Synthetic Sample Project",
+  "workspace_roots": [
+    "/replace/with/your/own/workspace"
+  ],
+  "context": {
+    "project_rules": "project-rules.md",
+    "analysis": "PROJECT_ANALYSIS.md",
+    "ui_map": "ui_map",
+    "db_catalog": null,
+    "db_connection": null
+  },
+  "modules": [
+    {
+      "name": "app",
+      "path": "app",
+      "kind": "backend",
+      "protected": false
+    }
+  ],
+  "rules": {
+    "always": [
+      "project-rules.md"
+    ],
+    "backend": [],
+    "frontend": [],
+    "sql": [],
+    "architecture": [],
+    "egov": []
+  },
+  "area_patterns": {
+    "backend": [
+      "app"
+    ],
+    "frontend": [
+      "web"
+    ],
+    "sql": [
+      "db"
+    ],
+    "architecture": [
+      "architecture"
+    ]
+  },
+  "protected_paths": [
+    "secrets"
+  ],
+  "local_dev_config_excludes": [
+    ".env",
+    "config.local.json"
+  ]
+}
