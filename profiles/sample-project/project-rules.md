@@ -1,3 +1,3 @@
-# Sample project rules
+# 예시 프로젝트 규칙
 
-Replace this synthetic file with the rules supported by your source tree. Do not use it as a verified target-project policy.
+합성 예시 파일입니다. 실제 프로젝트의 소스 구조와 승인된 정책을 조사하여 규칙을 작성해야 하며, 이 파일을 검증된 프로젝트 규칙으로 사용해서는 안 됩니다.
